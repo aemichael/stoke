@@ -199,6 +199,9 @@ private:
   Cost block_mem_error(const Memory& t, const Memory& rmem, const Regs& rsse, const x64asm::RegSet& defs) const;
   /** Evaluate error between rflags. */
   Cost rflags_error(const RFlags& t, const RFlags& r, const x64asm::RegSet& defs) const;
+  /** Evaluate error due to instruction-centric leakage. */
+  // SYNTH-TODO Define arguments for leakage state */
+  Cost lkg_error(const Regs& t, const Regs& r) const;
 
   /** Assess an undefined register penalty. */
   Cost undef_default(size_t num_bytes) const;

@@ -278,6 +278,8 @@ ostream& CpuState::write_text(ostream& os) const {
     "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14", "%ymm15"
   };
 
+  const char* lkgs[] = { "lkg0" };
+
   const char* rflags[] = {
     "%cf", "%1", "%pf", "%0", "%af", "%0", "%zf", "%sf", "%tf", "%if",
     "%df", "%of", "%iopl[0]", "%iopl[1]", "%nt", "%0", "%rf", "%vm", "%ac", "%vif",
@@ -293,6 +295,10 @@ ostream& CpuState::write_text(ostream& os) const {
   os << endl;
 
   sse.write_text(os, sses, 3);
+  os << endl;
+  os << endl;
+
+  lkg.write_text(os, lkgs, 3);
   os << endl;
   os << endl;
 
@@ -360,6 +366,8 @@ istream& CpuState::read_text(istream& is) {
     "%ymm8", "%ymm9", "%ymm10", "%ymm11", "%ymm12", "%ymm13", "%ymm14", "%ymm15"
   };
 
+  const char* lkgs[] = { "lkg0" };
+
   const char* rflags[] = {
     "%cf", "%1", "%pf", "%0", "%af", "%0", "%zf", "%sf", "%tf", "%if",
     "%df", "%of", "%iopl[0]", "%iopl[1]", "%nt", "%0", "%rf", "%vm", "%ac", "%vif",
@@ -390,6 +398,9 @@ istream& CpuState::read_text(istream& is) {
   sse.read_text(is, sses);
   is >> ws;
 
+  lkg.read_text(is, lkgs);
+  is >> ws;
+
   rf.read_text(is, rflags);
   is >> ws;
 
@@ -417,6 +428,7 @@ ostream& CpuState::write_bin(ostream& os) const {
   os.write((const char*)&code, sizeof(ErrorCode));
   gp.write_bin(os);
   sse.write_bin(os);
+  lkg.write_bin(os);
   rf.write_bin(os);
   stack.write_bin(os);
   heap.write_bin(os);
@@ -435,6 +447,7 @@ istream& CpuState::read_bin(istream& is) {
   is.read((char*)&code, sizeof(ErrorCode));
   gp.read_bin(is);
   sse.read_bin(is);
+  lkg.read_bin(is);
   rf.read_bin(is);
   stack.read_bin(is);
   heap.read_bin(is);

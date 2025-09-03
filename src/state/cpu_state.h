@@ -25,12 +25,13 @@
 #include "src/state/memory.h"
 #include "src/state/regs.h"
 #include "src/state/rflags.h"
+#include "src/state/lkg.h"
 
 namespace stoke {
 
 struct CpuState {
   /** Returns a new CpuState. */
-  CpuState() : code(ErrorCode::NORMAL), gp(16, 64), sse(16, 256), rf() {
+  CpuState() : code(ErrorCode::NORMAL), gp(16, 64), sse(16, 256), lkg(1, 1), rf() {
     stack.resize(0x700000000, 0);
     heap.resize (0x100000000, 0);
     data.resize (0x000000000, 0);
@@ -40,6 +41,7 @@ struct CpuState {
   CpuState& operator^=(const CpuState& rhs) {
     gp ^= rhs.gp;
     sse ^= rhs.sse;
+    lkg ^= rhs.lkg;
     rf ^= rhs.rf;
     stack ^= rhs.stack;
     heap ^= rhs.stack;
@@ -56,7 +58,7 @@ struct CpuState {
   /** Equality. */
   bool operator==(const CpuState& rhs) const {
     return code == rhs.code &&
-           gp == rhs.gp && sse == rhs.sse && rf == rhs.rf &&
+           gp == rhs.gp && sse == rhs.sse && lkg == rhs.lkg && rf == rhs.rf &&
            stack == rhs.stack && heap == rhs.heap && data == rhs.data;
   }
   /** Inequality. */
@@ -171,6 +173,11 @@ struct CpuState {
     return zero;
   }
 
+  /** Access a leakage register */
+  cpputil::BitVector operator[](const Lkg& lkgreg) const {
+    return lkg[lkgreg];
+  }
+
 
   /** Access Eflags */
   inline bool operator[](const x64asm::Eflags& f) const {
@@ -283,7 +290,9 @@ struct CpuState {
   Regs gp;
   /** SSE register buffer. */
   Regs sse;
-  /** Rflags. */
+  /** Leakage registers */
+  Regs lkg;
+ /** Rflags. */
   RFlags rf;
   /** Stack. */
   Memory stack;
@@ -295,7 +304,7 @@ struct CpuState {
   std::vector<Memory> segments;
   /** Shadow registers */
   std::map<std::string, uint64_t> shadow;
-
+ 
   /** Set memory from a map.  Returns true on success. */
   bool memory_from_map(std::unordered_map<uint64_t, cpputil::BitVector>& map);
 

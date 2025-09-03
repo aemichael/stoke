@@ -155,10 +155,16 @@ Cost CorrectnessCost::evaluate_error(const CpuState& t, const CpuState& r, const
   if (heap_out_) {
     cost += block_heap_ ? block_mem_error(t.heap, r.heap, r.sse, defs) : mem_error(t.heap, r.heap);
   }
+  cost += lkg_error(t.lkg, r.lkg); // SYNTH-TODO: arguments
 
   return cost;
 }
 
+
+// SYNTH-TODO: body, RegSet defs?
+Cost CorrectnessCost::lkg_error(const Regs& t, const Regs& r) const {
+  return 0;
+}
 
 
 Cost CorrectnessCost::gp_error(const CpuState& t, const CpuState& r, const RegSet& defs) const {
