@@ -9,7 +9,7 @@
 # Text               #  Line  RIP       Bytes  Opcode            
 ._Z11transform32jj:  #        0x400600  0      OPC=<label>       
   movl %edi, %eax    #  1     0x400600  2      OPC=movl_r32_r32  
-  subl %esi, %eax    #  2     0x400602  2      OPC=subl_r32_r32  
+  subl %esi, %eax
   retq               #  3     0x400604  1      OPC=retq          
   nop                #  4     0x400605  1      OPC=nop           
   nop                #  5     0x400606  1      OPC=nop           
