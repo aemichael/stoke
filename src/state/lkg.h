@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <array>
 
 namespace stoke {
 
@@ -12,6 +13,16 @@ namespace stoke {
 class Lkg {
 
 public:
+  static constexpr Lkg src() {
+    return {};
+  }
+
+  static constexpr std::array<Lkg, 1> lkgs() {
+    return {
+      src()
+    };
+  }
+
   /** Comparison based on on val_. */
   constexpr bool operator<(const Lkg& rhs) const {
     return val_ < rhs.val_;

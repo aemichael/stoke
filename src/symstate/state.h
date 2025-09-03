@@ -30,16 +30,16 @@ class SymState {
 public:
 
   /** Returns a new symbolic CPU state filled with 0s*/
-  SymState() : gp(16, 64), sse(16, 256), memory(NULL), delete_memory_(false) {
+  SymState() : gp(16, 64), sse(16, 256), lkg(1, 1), memory(NULL), delete_memory_(false) {
     keep_imm_symbolic = false;
   }
   /** Builds a symbolic CPU state from a concrete one */
-  SymState(const CpuState& cs) : gp(16, 64), sse(16, 256) {
+  SymState(const CpuState& cs) : gp(16, 64), sse(16, 256), lkg(1, 1) {
     keep_imm_symbolic = false;
     build_from_cpustate(cs);
   }
   /** Builds a symbolic CPU state with variable name suffix */
-  SymState(const std::string& suffix, bool no_suffix = false) : gp(16, 64), sse(16, 256), memory(NULL), delete_memory_(false) {
+  SymState(const std::string& suffix, bool no_suffix = false) : gp(16, 64), sse(16, 256), lkg(1, 1), memory(NULL), delete_memory_(false) {
     keep_imm_symbolic = false;
     build_with_suffix(suffix, no_suffix);
   }
@@ -63,6 +63,12 @@ public:
         delete elem.ptr;
       }
     }
+    auto lkgcontents = lkg.getcontents();
+    for (auto& elem: lkgcontents) {
+      if (elem.ptr) {
+        delete elem.ptr;
+      }
+    }
 
     for (auto& elem: rf) {
       if (elem.ptr) {
@@ -82,6 +88,8 @@ public:
   SymRegs gp;
   /** Symbolic SSE registers */
   SymRegs sse;
+  /** Symbolic leakage registers */
+  SymRegs lkg;
   /** Memory */
   SymMemory* memory;
   /** Symbolic rflags: CF, PF, AF, ZF, SF, OF */
@@ -111,6 +119,8 @@ public:
   /** Lookup the symbolic representation of a generic operand.
     * Can modify state if you lookup memory and it causes segfault. */
   SymBitVector operator[](const x64asm::Operand o);
+  /** Lookup the symbolic representation of a leakage register */
+  SymBitVector operator[](const Lkg lkgreg);
   /** Lookup the symbolic representation of a particular flag */
   SymBool operator[](const x64asm::Eflags rf) const;
   /** Lookup the symbolic representation of a generic operand.
@@ -130,6 +140,8 @@ public:
     * bits of ymm registers.
     */
   void set(const x64asm::Operand o, SymBitVector bv, bool avx = false, bool preserve32 = false);
+  /** Set a particular leakage register */
+  void set(const Lkg, SymBitVector bv);
   /** Set a particular flag */
   void set(const x64asm::Eflags, SymBool b);
 

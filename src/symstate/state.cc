@@ -16,6 +16,7 @@
 #include "src/symstate/state.h"
 #include "src/symstate/memory/flat.h"
 #include "src/ext/x64asm/include/x64asm.h"
+#include "src/state/lkg.h"
 
 using namespace std;
 using namespace stoke;
@@ -33,6 +34,10 @@ void SymState::build_from_cpustate(const CpuState& cs) {
       SymBitVector::constant(64, cs.sse[i].get_fixed_quad(2)) ||
       SymBitVector::constant(64, cs.sse[i].get_fixed_quad(1)) ||
       SymBitVector::constant(64, cs.sse[i].get_fixed_quad(0));
+  }
+
+  for (size_t i = 0; i < cs.lkg.size(); ++i) {
+    lkg[i] = SymBitVector::constant(64, cs.lkg[i].get_fixed_quad(0));
   }
 
   set(eflags_cf, SymBool::constant(cs.rf.is_set(eflags_cf.index())));
@@ -88,6 +93,15 @@ void SymState::build_with_suffix(const string& suffix, bool no_suffix) {
       name << "_" << suffix;
     }
     sse[i] = SymBitVector::var(256, name.str());
+  }
+
+  for (size_t i = 0; i < lkg.size(); ++i) {
+    stringstream name;
+    name << Lkg::lkgs[i];
+    if (!no_suffix) {
+      name << "_" << suffix;
+    }
+    lkg[i] = SymBitVector::var(64, name.str());
   }
 
   set(eflags_cf, SymBool::var("%cf" + (no_suffix ? "" : "_" + suffix)));
@@ -276,6 +290,11 @@ void SymState::set(const Operand o, SymBitVector bv, bool avx, bool preserve32) 
 
   assert(false);
 
+}
+
+// SYNTH-TODO implement set for leakage registers
+void SymState::set(const Lkg lkgreg, SymBitVector bv) {
+  lkg[lkgreg] = bv;
 }
 
 void SymState::set(const Eflags f, SymBool b) {
