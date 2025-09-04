@@ -76,6 +76,14 @@ void AddHandler::build_circuit(const x64asm::Instruction& instr, SymState& state
   /* Don't actually write out the result */
   bool compare = opcode.substr(0, 3) == "cmp";
 
+  /* Source has leakage? */
+  bool leaky_src = opcode.substr(0, 3) == "sub" ||
+                   opcode.substr(0, 3) == "cmp" ||
+                   opcode.substr(0, 3) == "add";
+
+  /* Destination has leakage? */
+  bool leaky_dest = opcode.substr(0, 3) == "add";
+
   // Fetch Operands
   Operand dest = instr.get_operand<Operand>(0);
   Operand src  = instr.get_operand<Operand>(1);
@@ -136,6 +144,11 @@ void AddHandler::build_circuit(const x64asm::Instruction& instr, SymState& state
     // Set the destination value; takes care of perserving
     // other bits and setting other bits to zero
     state.set(dest, total[width-1][0]);
+  }
+
+  if (leaky_src) {
+    // SYNTH-TODO Naively setting source leakage every time
+    state.set(Lkg::srclkg, SymBitVector::constant(1,1));
   }
 
   state.set(eflags_of, plus_of(src_bv[width-1], dst_bv[width-1], total[width-1]));

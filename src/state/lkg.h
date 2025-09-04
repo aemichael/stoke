@@ -13,13 +13,13 @@ namespace stoke {
 class Lkg {
 
 public:
-  static constexpr Lkg src() {
+  static constexpr Lkg srclkg() {
     return {};
   }
 
   static constexpr std::array<Lkg, 1> lkgs() {
     return {
-      src()
+      srclkg()
     };
   }
 
