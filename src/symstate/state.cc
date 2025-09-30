@@ -16,7 +16,7 @@
 #include "src/symstate/state.h"
 #include "src/symstate/memory/flat.h"
 #include "src/ext/x64asm/include/x64asm.h"
-#include "src/state/lkg.h"
+#include "src/state/leakage.h"
 
 using namespace std;
 using namespace stoke;
@@ -97,7 +97,7 @@ void SymState::build_with_suffix(const string& suffix, bool no_suffix) {
 
   for (size_t i = 0; i < lkg.size(); ++i) {
     stringstream name;
-    name << Lkg::lkgs[i];
+    name << LeakageReg::lkgs[i];
     if (!no_suffix) {
       name << "_" << suffix;
     }
@@ -293,7 +293,7 @@ void SymState::set(const Operand o, SymBitVector bv, bool avx, bool preserve32) 
 }
 
 // SYNTH-TODO implement set for leakage registers
-void SymState::set(const Lkg lkgreg, SymBitVector bv) {
+void SymState::set(const LeakageReg lkgreg, SymBitVector bv) {
   lkg[lkgreg] = bv;
 }
 

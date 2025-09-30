@@ -120,7 +120,7 @@ public:
     * Can modify state if you lookup memory and it causes segfault. */
   SymBitVector operator[](const x64asm::Operand o);
   /** Lookup the symbolic representation of a leakage register */
-  SymBitVector operator[](const Lkg lkgreg);
+  SymBitVector operator[](const LeakageReg lkgreg);
   /** Lookup the symbolic representation of a particular flag */
   SymBool operator[](const x64asm::Eflags rf) const;
   /** Lookup the symbolic representation of a generic operand.
@@ -141,7 +141,7 @@ public:
     */
   void set(const x64asm::Operand o, SymBitVector bv, bool avx = false, bool preserve32 = false);
   /** Set a particular leakage register */
-  void set(const Lkg, SymBitVector bv);
+  void set(const LeakageReg, SymBitVector bv);
   /** Set a particular flag */
   void set(const x64asm::Eflags, SymBool b);
 

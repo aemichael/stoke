@@ -148,7 +148,7 @@ void AddHandler::build_circuit(const x64asm::Instruction& instr, SymState& state
 
   if (leaky_src) {
     // SYNTH-TODO Naively setting source leakage every time
-    state.set(Lkg::srclkg, SymBitVector::constant(1,1));
+    state.set(LeakageReg::srclkg(), SymBitVector::constant(2,1));
   }
 
   state.set(eflags_of, plus_of(src_bv[width-1], dst_bv[width-1], total[width-1]));

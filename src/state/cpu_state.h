@@ -25,7 +25,7 @@
 #include "src/state/memory.h"
 #include "src/state/regs.h"
 #include "src/state/rflags.h"
-#include "src/state/lkg.h"
+#include "src/state/leakage.h"
 
 namespace stoke {
 
@@ -174,7 +174,7 @@ struct CpuState {
   }
 
   /** Access a leakage register */
-  cpputil::BitVector operator[](const Lkg& lkgreg) const {
+  cpputil::BitVector operator[](const LeakageReg& lkgreg) const {
     return lkg[lkgreg];
   }
 

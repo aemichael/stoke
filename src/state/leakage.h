@@ -10,29 +10,29 @@ namespace stoke {
 /** A leakage register. Conceptually, each leakage register represents
     side channel leakage for one "unit" of secret data, e.g., one register. 
 */
-class Lkg {
+class LeakageReg {
 
 public:
-  static constexpr Lkg srclkg() {
+  static constexpr LeakageReg srclkg() {
     return {};
   }
 
-  static constexpr std::array<Lkg, 1> lkgs() {
+  static constexpr std::array<LeakageReg, 1> lkgs() {
     return {
       srclkg()
     };
   }
 
   /** Comparison based on on val_. */
-  constexpr bool operator<(const Lkg& rhs) const {
+  constexpr bool operator<(const LeakageReg& rhs) const {
     return val_ < rhs.val_;
   }
   /** Comparison based on on val_. */
-  constexpr bool operator==(const Lkg& rhs) const {
+  constexpr bool operator==(const LeakageReg& rhs) const {
     return val_ == rhs.val_;
   }
   /** Comparison based on on val_. */
-  constexpr bool operator!=(const Lkg& rhs) const {
+  constexpr bool operator!=(const LeakageReg& rhs) const {
     return !(*this == rhs);
   }
 
@@ -41,12 +41,12 @@ public:
     return val_;
   }
 
-protected:
   /** Creates a leakage register with specified underlying value. */
-  constexpr Lkg(uint64_t val) : val_(val) {}
+  constexpr LeakageReg(uint64_t val) : val_(val) {}
   /** Creates a leakage register with default underlying value */ 
-  constexpr Lkg() : val_(0) {}
+  constexpr LeakageReg() : val_(0) {}
 
+protected:
   /** Underlying value. */
   uint64_t val_;
 };
