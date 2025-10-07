@@ -25,8 +25,10 @@
 #include "src/verifier/sequence.h"
 #include "src/verifier/verifier.h"
 #include "src/validator/bounded.h"
+#include "src/validator/leakage.h"
 #include "src/validator/ddec.h"
 
+#include "tools/args/leakage_validator.inc"
 #include "tools/args/bounded_validator.inc"
 #include "tools/args/ddec_validator.inc"
 #include "tools/args/in_out.inc"
