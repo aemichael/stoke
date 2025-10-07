@@ -109,7 +109,14 @@ private:
   }
 
   Verifier* make_by_name(std::string s, Sandbox& sandbox, CorrectnessCost& fxn) {
-    if (s == "bounded") {
+    if (s == "leakage") {
+      auto bv = new LeakageValidator(*solver_);
+      bv->set_bound(bound_arg.value());
+      bv->set_alias_strategy(parse_alias());
+      bv->set_no_bailout(no_bailout_arg.value());
+      bv->set_nacl(verify_nacl_arg);
+      return bv;
+    } else if (s == "bounded") {
       auto bv = new BoundedValidator(*solver_);
       bv->set_bound(bound_arg.value());
       bv->set_alias_strategy(parse_alias());
