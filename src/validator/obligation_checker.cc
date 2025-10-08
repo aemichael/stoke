@@ -964,6 +964,7 @@ void ObligationChecker::build_circuit(const Cfg& cfg, Cfg::id_type bb, JumpType 
   size_t end_index = start_index + cfg.num_instrs(bb);
 
   for (size_t i = start_index; i < end_index; ++i) {
+    cout << "Line no: " << line_no << " (" << start_index << ", " << end_index << ")" << endl;
     auto li = line_map.at(line_no);
     line_no++;
     auto instr = cfg.get_code()[i];
@@ -1361,18 +1362,23 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
 
 }
 
-// Check for leakage at the current instruction with the given starting state
-bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, SymState& state) {
+// Check for leakage at the current instruction with the given starting state,
+// and build circuit to progress to next state
+bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpType jump,
+                                            SymState& state, size_t& line_no, const LineMap& line_map) {
+  auto li = line_map.at(line_no);
+  line_no++;
   auto instr = cfg.get_code()[index];
-  cout << "Instr at index " << index << ": " << instr << endl;
+  cout << "Instr at index " << index << ", line " << line_no-1 << ": " << instr << endl;
 
-  // Collect list of constraint sets, with each top-level element corresponding
-  // to the constraints for one equivalence class.
+  bool is_leaky = false;
+
+  // Step 1: Collect input leakage constraints
+  // Each top-level element represents the constraints for one equivalence class.
   vector<vector<SymBool>> constraints;
-  
-  // Build leakage constraints for the current instruction
   string opcode = Handler::get_opcode(instr);
 
+  // Handle just subl for now. TODO later: pull from generated leakage specs
   if (opcode == "subl") {
     Operand src = instr.get_operand<Operand>(1);
     SymBitVector src_bv = state[src];
@@ -1380,7 +1386,6 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, SymSta
     
     cout << "SUBL SRC: " << src << " = " << src_bv << endl;
 
-    // TODO: pull these from generated map
     vector<SymBool> constraints_1;
     constraints_1.push_back(src_bv == SymBitVector::constant(width, 0));
     constraints.push_back(constraints_1);
@@ -1389,9 +1394,71 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, SymSta
     constraints_2.push_back(src_bv != SymBitVector::constant(width, 0));
     constraints.push_back(constraints_2);
   }
-  
+
+  // Step 2: Step the state forward once
+  // Logic copied from build_circuit. Not using state.constraints for now,
+  // but might need them to give the solver sufficient data flow info
+  if (instr.is_jcc()) {
+    // get the name of the condition
+    string name = opcode_write_att(instr.get_opcode());
+    string condition = name.substr(1);
+    auto constraint = ConditionalHandler::condition_predicate(condition, state);
+
+    // figure out if its this condition (jump case) or negation (fallthrough)
+    switch (jump) {
+    case JumpType::JUMP:
+      state.constraints.push_back(constraint);
+      return !is_leaky;
+    case JumpType::FALL_THROUGH:
+      constraint = !constraint;
+      state.constraints.push_back(constraint);
+      return !is_leaky;
+    case JumpType::NONE:
+      return !is_leaky;
+    default:
+      assert(false);
+    }
+
+  } else if (instr.is_label_defn() || instr.is_nop() || instr.is_any_jump()) {
+    return !is_leaky;
+  } else if (instr.is_ret()) {
+    return !is_leaky;
+  } else {
+    // Build the handler for the instruction
+    state.set_lineno(line_no - 1);
+    state.rip = SymBitVector::constant(64, li.rip_offset);
+
+    // AEM: Not sure if we need this part for leakage
+    if (nacl_) {
+      // We need to add constraints keeping the index register (if present)
+      // away from the edges of the address space.
+      if (instr.is_explicit_memory_dereference()) {
+        auto mem = instr.get_operand<M8>(instr.mem_index());
+        if (mem.contains_index()) {
+          R64 index = mem.get_index();
+          auto address = state[index];
+          state.constraints.push_back(address >= SymBitVector::constant(64, 0x10));
+          state.constraints.push_back(address <= SymBitVector::constant(64, 0xfffffff0));
+        }
+      }
+    }
+
+    // AEM: I'm not really sure what this does, just leaving it in for now
+    auto constraints = (*filter_)(instr, state);
+    for (auto constraint : constraints) {
+      state.constraints.push_back(constraint);
+    }
+
+    if (filter_->has_error()) {
+      throw VALIDATOR_ERROR(filter_->error());
+    }
+  }
+
+  // Step 2.5: If we need to deal with output constraints, handle that here
+
+  // Step 3: Query the solver for leakage
   bool has_sat = false;
-  bool is_leaky = false;
+
   // Check all sets of leakage constraints
   for (size_t i = 0; i < constraints.size(); ++i) {
     cout << "Checking leakage for constraint set " << i << endl;
@@ -1425,6 +1492,10 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, SymSta
 bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
   bool no_lkg = true;
   SymState state("INIT");
+
+  cout << "Checking for leakage on path:" << endl;
+  print(P);
+  cout << endl;
   
   // We don't consider memory instructions for leakage, but we do have to model it
   // for accurate data flow
@@ -1434,11 +1505,15 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
   // Unroll CFG with line numbers for circuit-building
   LineMap line_map;
   rewrite_cfg_with_path(cfg, P, line_map);
+  cout << "Line map: " << line_map.size() << endl;
 
   // Step through the path instruction-by-instruction to check for leakage
   size_t line_no = 0;
   for (size_t i = 0; i < P.size(); ++i) {
     auto bb = P[i];
+    if (cfg.num_instrs(bb) == 0)
+      continue;
+
     cout << "Examining BB: " << bb << endl;
 
     size_t start_index = cfg.get_index(std::pair<Cfg::id_type, size_t>(bb, 0));
@@ -1448,8 +1523,8 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
     for (size_t j = start_index; j < end_index; ++j) {
       // Check input leakage first, then step the state forward
       // Will need changes if we want to check leakage on output too
-      no_lkg &= check_instr_leakage(cfg, bb, state);
-      build_circuit(cfg, bb, is_jump(cfg,bb,P,i), state, line_no, line_map);
+      no_lkg &= check_instr_leakage(cfg, j, is_jump(cfg,bb,P,i), state, line_no, line_map);
+      cout << "Leakage as of index " << j << ": " << no_lkg << endl;
     }
   }
 

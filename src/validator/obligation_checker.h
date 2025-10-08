@@ -114,9 +114,6 @@ public:
              const CfgPath& p, const CfgPath& q,
              const Invariant& assume, const Invariant& prove);
 
-  /** Check leakage for single instruction */
-  bool check_instr_leakage(const Cfg& cfg, size_t index, SymState&);
-
   /** Check leakage for whole path */
   bool check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P);
 
@@ -232,6 +229,9 @@ private:
 
   /** Build the circuit for a single basic block */
   void build_circuit(const Cfg&, Cfg::id_type, JumpType, SymState&, size_t& line_no, const LineMap& line_map);
+ 
+  /** Check leakage for single instruction */
+  bool check_instr_leakage(const Cfg&, Cfg::id_type, JumpType, SymState&, size_t& line_no, const LineMap& line_map);
 
   // This is to print out Cfg paths easily (for debugging purposes).
   static std::string print(const CfgPath& p) {
