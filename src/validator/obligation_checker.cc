@@ -1362,14 +1362,9 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
 }
 
 // Check for leakage at the current instruction with the given starting state
-bool LeakageValidator::check_instr_leakage(const Cfg& cfg, SymState& state) {
-  auto bb = cfg.get_entry();
-  if (cfg.num_instrs(bb) != 1) {
-    throw VALIDATOR_ERROR("Multiple instructions in leakage query" << endl);
-  }
-
-  auto instr = cfg.get_code()[i];
-  cout << "INST: " << P[i] << endl << "\t[" << instr << "]" << endl;
+bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, SymState& state) {
+  auto instr = cfg.get_code()[index];
+  cout << "Instr at index " << index << ": " << instr << endl;
 
   // Collect list of constraint sets, with each top-level element corresponding
   // to the constraints for one equivalence class.
@@ -1395,43 +1390,39 @@ bool LeakageValidator::check_instr_leakage(const Cfg& cfg, SymState& state) {
     constraints.push_back(constraints_2);
   }
   
+  bool has_sat = false;
+  bool is_leaky = false;
   // Check all sets of leakage constraints
   for (size_t i = 0; i < constraints.size(); ++i) {
     cout << "Checking leakage for constraint set " << i << endl;
 
-    auto ecs = constraints[i];
-    bool has_sat = false;
-    bool is_leaky = false;
-
-    for (size_t j = 0; j < ecs.size(); ++j) {
-      bool is_sat = solver_.is_sat(ecs[j]);
-      if (solver_.has_error()) {
-        throw VALIDATOR_ERROR("solver: " + solver_.get_error());
-      }
-
-      // "Leaky" means there are possible paths through this instruction that
-      // fall into more than one distinguishable equivalence class
-      if (is_sat && has_sat) {
-        // TODO record counterexamples
-        cout << "Found leakage (" << j << ")" << endl;
-        is_leaky = true;
-
-      } else if (is_sat) {
-        cout << "Found SAT (" << j << ")" << endl;
-        has_sat = true;
-      }
-
-      // We can finish early once we've determined the instruction is leaky
-      if (is_leaky && bailout_)
-        break;
+    bool is_sat = solver_.is_sat(constraints[i]);
+    if (solver_.has_error()) {
+      throw VALIDATOR_ERROR("solver: " + solver_.get_error());
     }
-    no_lkg &= !is_leaky;
-  }
 
-  return no_lkg;
+    // "Leaky" means there are possible paths through this instruction that
+    // fall into more than one distinguishable equivalence class
+    if (is_sat && has_sat) {
+      // TODO record counterexamples
+      cout << "Found leakage" << endl;
+      is_leaky = true;
+
+    } else if (is_sat) {
+      cout << "Found SAT" << endl;
+      has_sat = true;
+    }
+
+    // We can finish early once we've determined the instruction is leaky
+    // TODO add parameter for bailing out
+    if (is_leaky)
+      break;
+  }
+  
+  return !is_leaky;
 }
 
-bool LeakageValidator::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
+bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
   bool no_lkg = true;
   SymState state("INIT");
   
@@ -1449,11 +1440,17 @@ bool LeakageValidator::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P
   for (size_t i = 0; i < P.size(); ++i) {
     auto bb = P[i];
     cout << "Examining BB: " << bb << endl;
+
+    size_t start_index = cfg.get_index(std::pair<Cfg::id_type, size_t>(bb, 0));
+    size_t end_index = start_index + cfg.num_instrs(bb);
     
-    // Check input leakage first, then step the state forward
-    // Will need changes if we want to check leakage on output too
-    no_lkg &= check_leakage(bb, state);
-    build_circuit(cfg, bb, is_jump(bb,bb.get_entry(),P,i), state, line_no, line_map);
+    // Iterate over each instruction in the basic block
+    for (size_t j = start_index; j < end_index; ++j) {
+      // Check input leakage first, then step the state forward
+      // Will need changes if we want to check leakage on output too
+      no_lkg &= check_instr_leakage(cfg, bb, state);
+      build_circuit(cfg, bb, is_jump(cfg,bb,P,i), state, line_no, line_map);
+    }
   }
 
   return no_lkg;

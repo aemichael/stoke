@@ -112,12 +112,12 @@ private:
 
   Verifier* make_by_name(std::string s, Sandbox& sandbox, CorrectnessCost& fxn) {
     if (s == "leakage") {
-      auto bv = new LeakageValidator(*solver_);
-      bv->set_bound(bound_arg.value());
-      bv->set_alias_strategy(parse_alias());
-      bv->set_no_bailout(no_bailout_arg.value());
-      bv->set_nacl(verify_nacl_arg);
-      return bv;
+      auto lv = new LeakageValidator(*solver_);
+      lv->set_bound(bound_arg.value());
+      lv->set_alias_strategy(parse_alias());
+      lv->set_no_bailout(no_bailout_arg.value());
+      lv->set_nacl(verify_nacl_arg);
+      return lv;
     } else if (s == "bounded") {
       auto bv = new BoundedValidator(*solver_);
       bv->set_bound(bound_arg.value());

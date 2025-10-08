@@ -25,16 +25,6 @@ namespace stoke {
 cpputil::Heading& leakage_validator_options =
   cpputil::Heading::create("Leakage Verifier Options:");
 
-cpputil::ValueArg<size_t>& bound_arg =
-  cpputil::ValueArg<size_t>::create("bound")
-  .usage("<int>")
-  .description("Maximum iterations through a loop")
-  .default_val(2);
-
-cpputil::FlagArg& no_bailout_arg =
-  cpputil::FlagArg::create("no_early_bailout")
-  .description("Do not bailout once first counterexample found");
-
 } // namespace stoke
 
 #endif

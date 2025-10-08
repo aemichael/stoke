@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef STOKE_SRC_VALIDATOR_BOUNDED_H
-#define STOKE_SRC_VALIDATOR_BOUNDED_H
+#ifndef STOKE_SRC_VALIDATOR_LEAKAGE_H
+#define STOKE_SRC_VALIDATOR_LEAKAGE_H
 
 #include <iostream>
 #include <vector>
@@ -90,7 +90,6 @@ public:
     return leakage_counterexamples_;
   }
 
-
   /** Get the expected final state of the target after running counterexample.
     (This is only for the fuzz tester, basically).  It is only valid if we just
     returned a counterexample.  It also doesn't handle memory writes right. */
@@ -116,9 +115,6 @@ private:
 
   /** Verify a pair of paths. */
   bool verify_pair(const Cfg& target, const Cfg& rewrite, const CfgPath& p, const CfgPath& q);
-
-  /** Verify a path has no leakage. */
-  bool verify_no_leakage(const Cfg& target, const Cfg& rewrite, const CfgPath& p, const CfgPath& q);
 
   /** The set of counterexamples (one per pair) that we've found. */
   std::vector<CpuState> counterexamples_;

@@ -115,7 +115,7 @@ public:
              const Invariant& assume, const Invariant& prove);
 
   /** Check leakage for single instruction */
-  bool check_instr_leakage(const Cfg& cfg, SymState&);
+  bool check_instr_leakage(const Cfg& cfg, size_t index, SymState&);
 
   /** Check leakage for whole path */
   bool check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P);
