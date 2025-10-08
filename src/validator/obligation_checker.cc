@@ -1361,6 +1361,104 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
 
 }
 
+// Check for leakage at the current instruction with the given starting state
+bool LeakageValidator::check_instr_leakage(const Cfg& cfg, SymState& state) {
+  auto bb = cfg.get_entry();
+  if (cfg.num_instrs(bb) != 1) {
+    throw VALIDATOR_ERROR("Multiple instructions in leakage query" << endl);
+  }
+
+  auto instr = cfg.get_code()[i];
+  cout << "INST: " << P[i] << endl << "\t[" << instr << "]" << endl;
+
+  // Collect list of constraint sets, with each top-level element corresponding
+  // to the constraints for one equivalence class.
+  vector<vector<SymBool>> constraints;
+  
+  // Build leakage constraints for the current instruction
+  string opcode = Handler::get_opcode(instr);
+
+  if (opcode == "subl") {
+    Operand src = instr.get_operand<Operand>(1);
+    SymBitVector src_bv = state[src];
+    uint16_t width = src.size();
+    
+    cout << "SUBL SRC: " << src << " = " << src_bv << endl;
+
+    // TODO: pull these from generated map
+    vector<SymBool> constraints_1;
+    constraints_1.push_back(src_bv == SymBitVector::constant(width, 0));
+    constraints.push_back(constraints_1);
+
+    vector<SymBool> constraints_2;
+    constraints_2.push_back(src_bv != SymBitVector::constant(width, 0));
+    constraints.push_back(constraints_2);
+  }
+  
+  // Check all sets of leakage constraints
+  for (size_t i = 0; i < constraints.size(); ++i) {
+    cout << "Checking leakage for constraint set " << i << endl;
+
+    auto ecs = constraints[i];
+    bool has_sat = false;
+    bool is_leaky = false;
+
+    for (size_t j = 0; j < ecs.size(); ++j) {
+      bool is_sat = solver_.is_sat(ecs[j]);
+      if (solver_.has_error()) {
+        throw VALIDATOR_ERROR("solver: " + solver_.get_error());
+      }
+
+      // "Leaky" means there are possible paths through this instruction that
+      // fall into more than one distinguishable equivalence class
+      if (is_sat && has_sat) {
+        // TODO record counterexamples
+        cout << "Found leakage (" << j << ")" << endl;
+        is_leaky = true;
+
+      } else if (is_sat) {
+        cout << "Found SAT (" << j << ")" << endl;
+        has_sat = true;
+      }
+
+      // We can finish early once we've determined the instruction is leaky
+      if (is_leaky && bailout_)
+        break;
+    }
+    no_lkg &= !is_leaky;
+  }
+
+  return no_lkg;
+}
+
+bool LeakageValidator::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
+  bool no_lkg = true;
+  SymState state("INIT");
+  
+  // We don't consider memory instructions for leakage, but we do have to model it
+  // for accurate data flow
+  // Using super simple flat memory model for now
+  state.memory = new FlatMemory();
+
+  // Unroll CFG with line numbers for circuit-building
+  LineMap line_map;
+  rewrite_cfg_with_path(cfg, P, line_map);
+
+  // Step through the path instruction-by-instruction to check for leakage
+  size_t line_no = 0;
+  for (size_t i = 0; i < P.size(); ++i) {
+    auto bb = P[i];
+    cout << "Examining BB: " << bb << endl;
+    
+    // Check input leakage first, then step the state forward
+    // Will need changes if we want to check leakage on output too
+    no_lkg &= check_leakage(bb, state);
+    build_circuit(cfg, bb, is_jump(bb,bb.get_entry(),P,i), state, line_no, line_map);
+  }
+
+  return no_lkg;
+}
+
 Cfg ObligationChecker::rewrite_cfg_with_path(const Cfg& cfg, const CfgPath& p,
     map<size_t,LineInfo>& to_populate) {
   Code code;
