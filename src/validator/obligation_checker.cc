@@ -964,7 +964,6 @@ void ObligationChecker::build_circuit(const Cfg& cfg, Cfg::id_type bb, JumpType 
   size_t end_index = start_index + cfg.num_instrs(bb);
 
   for (size_t i = start_index; i < end_index; ++i) {
-    cout << "Line no: " << line_no << " (" << start_index << ", " << end_index << ")" << endl;
     auto li = line_map.at(line_no);
     line_no++;
     auto instr = cfg.get_code()[i];

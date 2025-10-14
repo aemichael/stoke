@@ -149,6 +149,7 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
         if (bailout_ && !no_lkg && leakage_counterexamples_.size() > 0)
           break;
       }
+      ok &= no_lkg;
     }
 
     return ok;
