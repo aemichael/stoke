@@ -25,8 +25,10 @@
 #include "src/verifier/sequence.h"
 #include "src/verifier/verifier.h"
 #include "src/validator/bounded.h"
+#include "src/validator/leakage.h"
 #include "src/validator/ddec.h"
 
+#include "tools/args/leakage_validator.inc"
 #include "tools/args/bounded_validator.inc"
 #include "tools/args/ddec_validator.inc"
 #include "tools/args/in_out.inc"
@@ -109,7 +111,14 @@ private:
   }
 
   Verifier* make_by_name(std::string s, Sandbox& sandbox, CorrectnessCost& fxn) {
-    if (s == "bounded") {
+    if (s == "leakage") {
+      auto lv = new LeakageValidator(*solver_);
+      lv->set_bound(bound_arg.value());
+      lv->set_alias_strategy(parse_alias());
+      lv->set_no_bailout(no_bailout_arg.value());
+      lv->set_nacl(verify_nacl_arg);
+      return lv;
+    } else if (s == "bounded") {
       auto bv = new BoundedValidator(*solver_);
       bv->set_bound(bound_arg.value());
       bv->set_alias_strategy(parse_alias());

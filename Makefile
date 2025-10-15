@@ -177,6 +177,7 @@ SRC_OBJ=\
 	src/tunit/tunit.o \
 	\
 	src/validator/bounded.o \
+        src/validator/leakage.o \
 	src/validator/cutpoints.o \
 	src/validator/ddec.o \
 	src/validator/handler.o \

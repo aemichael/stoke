@@ -7,4 +7,5 @@ tags
 .stoke_config
 aliasing
 .DS_Store
-
+.vscode
+leakage_test_logs/*
