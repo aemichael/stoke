@@ -82,6 +82,12 @@ protected:
     return rs;
   }
 
+  static x64asm::RegSet omit_reserved_and_flags() {
+    auto rs = (x64asm::RegSet::all_gps() | x64asm::RegSet::all_ymms());
+    rs -= (x64asm::RegSet::empty() + x64asm::Constants::r11());
+    return rs;
+  }
+
   void fail() {
     FAIL();
   }
@@ -208,7 +214,7 @@ TEST_P(LeakageValidatorLeakageTest, SimpleSublConstZero) {
   ssr << ".foo:" << std::endl;
   ssr << "subl $0, %eax" << std::endl;
   ssr << "retq" << std::endl;
-  auto rewrite = make_cfg(ssr, live_outs, live_outs]
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
   
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
@@ -226,9 +232,9 @@ TEST_P(LeakageValidatorLeakageTest, SimpleSublConstReg) {
   auto target = make_cfg(sst, live_outs, live_outs);
 
   std::stringstream ssr;
-  sst << ".foo:" << std::endl;
-  sst << "movl $5, %ecx" << std::endl;
-  sst << "subl %ecx, %eax" << std::endl;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $5, %ecx" << std::endl;
+  ssr << "subl %ecx, %eax" << std::endl;
   ssr << "retq" << std::endl;
   auto rewrite = make_cfg(ssr, live_outs, live_outs);
 
@@ -238,7 +244,7 @@ TEST_P(LeakageValidatorLeakageTest, SimpleSublConstReg) {
 
 TEST_P(LeakageValidatorLeakageTest, SimpleSublTransformNonLeaky) {
 
-  auto live_outs = all();
+  auto live_outs = omit_reserved_and_flags();
 
   std::stringstream sst;
   sst << ".foo:" << std::endl;
@@ -247,17 +253,24 @@ TEST_P(LeakageValidatorLeakageTest, SimpleSublTransformNonLeaky) {
   auto target = make_cfg(sst, live_outs, live_outs);
 
   std::stringstream ssr;
-  sst << ".foo:" << std::endl;
-  sst << "pushq %rcx" << std::endl;
-  sst << "subq $0xFFFFFFFF, %rcx" << std::endl;
-  sst << "subq $0xFFFFFFFF, %rcx" << std::endl;
-  sst << "subq %rcx, %rax" << std::endl;
-  sst << "movl %eax, %eax" << std::endl;
-  sst << "popq %rcx" << std::endl;
+  ssr << ".foo:" << std::endl;
+  ssr << "movq %rcx, %r11" << std::endl;
+  ssr << "subq $0x80000000, %rcx" << std::endl;
+  ssr << "subq $0x80000000, %rcx" << std::endl;
+  ssr << "subq %rcx, %rax" << std::endl;
+  ssr << "movl %eax, %eax" << std::endl;
+  ssr << "movq %r11, %rcx" << std::endl;
   ssr << "retq" << std::endl;
+
   auto rewrite = make_cfg(ssr, live_outs, live_outs);
 
   EXPECT_TRUE(validator->verify(target, rewrite));
+  
+  if (validator->counter_examples_available()) {
+    for (auto it : validator->get_counter_examples())
+      check_ceg(it, target, rewrite, true);
+  }
+
   EXPECT_FALSE(validator->has_error()) << validator->error();
 }
 
