@@ -8,3 +8,4 @@ tags
 aliasing
 .DS_Store
 .vscode
+leakage_test_logs/*
