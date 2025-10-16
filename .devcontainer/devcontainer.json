@@ -1,0 +1,74 @@
+{
+	"name": "STOKE Development Environment",
+	"build": {
+		"dockerfile": "Dockerfile.dev",
+		"context": ".."
+	},
+	
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/common-utils:2": {}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [22],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "echo 'STOKE development container ready!' && git config --global --add safe.directory /home/stoke/stoke",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.cmake-tools",
+				"twxs.cmake",
+				"ms-python.python",
+				"ms-python.pylint",
+				"ms-vscode.makefile-tools",
+				"streetsidesoftware.code-spell-checker",
+				"eamodio.gitlens"
+			],
+			"settings": {
+				"C_Cpp.default.cppStandard": "c++11",
+				"C_Cpp.default.cStandard": "c11",
+				"C_Cpp.default.compilerPath": "/usr/bin/g++-4.9",
+				"files.associations": {
+					"*.s": "asm-intel-x86-generic",
+					"*.asm": "asm-intel-x86-generic"
+				},
+				"terminal.integrated.defaultProfile.linux": "bash",
+				"terminal.integrated.profiles.linux": {
+					"bash": {
+						"path": "/bin/bash",
+						"args": ["-l"]
+					}
+				}
+			}
+		}
+	},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "stoke",
+
+	// Set environment variables
+	"remoteEnv": {
+		"PATH": "/home/stoke/stoke/bin:${containerEnv:PATH}"
+	},
+
+	// Mount the workspace
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/stoke/stoke,type=bind,consistency=cached",
+	"workspaceFolder": "/home/stoke/stoke",
+
+	// Ensure the container runs with privileges needed for debugging
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt", "seccomp=unconfined"
+	],
+
+	// Keep container running
+	"shutdownAction": "stopContainer"
+}

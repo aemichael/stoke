@@ -1,0 +1,53 @@
+{
+    "C_Cpp.default.cppStandard": "c++11",
+    "C_Cpp.default.cStandard": "c11", 
+    "C_Cpp.default.compilerPath": "/usr/bin/g++",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/src/ext",
+        "/usr/include",
+        "/usr/include/c++/4.9",
+        "/usr/include/x86_64-linux-gnu/c++/4.9"
+    ],
+    "C_Cpp.default.defines": [
+        "_GNU_SOURCE"
+    ],
+    "files.associations": {
+        "*.s": "asm-intel-x86-generic",
+        "*.asm": "asm-intel-x86-generic",
+        "*.h": "c",
+        "*.cc": "cpp",
+        "*.tcc": "cpp"
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/*.o": true,
+        "**/*.a": true,
+        "**/*.so": true,
+        "**/build": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/.git": true,
+        "**/build": true,
+        "**/*.o": true,
+        "**/*.a": true
+    },
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "cmake.configureOnOpen": false,
+    "makefile.configurations": [
+        {
+            "name": "Default",
+            "makefilePath": "${workspaceFolder}/Makefile",
+            "makeDirectory": "${workspaceFolder}",
+            "buildTarget": "all"
+        }
+    ]
+}
