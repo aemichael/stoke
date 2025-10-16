@@ -1,0 +1,134 @@
+FROM ubuntu:20.04
+LABEL maintainer="Berkeley Churchill (berkeley@cs.stanford.edu)"
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Create stoke user first
+RUN useradd -ms /bin/bash stoke
+
+# Install software-properties-common first, then add PPA for newer GCC versions
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+    && apt-get update
+
+# Add Ubuntu 16.04 (Xenial) repositories to install GCC 4.9
+RUN echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list && \
+    echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list && \
+    apt-get update
+
+# Install GCC 4.9 from Xenial repositories
+RUN apt-get install -y --allow-unauthenticated \
+    gcc-4.9 \
+    g++-4.9 \
+    gcc-4.9-multilib \
+    g++-4.9-multilib
+
+# Install all STOKE dependencies
+RUN apt-get install -y \
+    antlr \
+    autoconf \
+    bison \
+    ccache \
+    cmake \
+    doxygen \
+    exuberant-ctags \
+    flex \
+    g++-multilib \
+    ghc \
+    git \
+    libantlr3c-dev \
+    libboost-all-dev \
+    libcln-dev \
+    libghc-regex-compat-dev \
+    libghc-regex-tdfa-dev \
+    libghc-split-dev \
+    libgmp-dev \
+    libjsoncpp-dev \
+    libiml-dev \
+    libpqxx-dev \
+    libtool \
+    openssh-server \
+    pccts \
+    pkg-config \
+    python3 \
+    subversion \
+    time \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional development tools for devcontainer
+RUN apt-get update && apt-get install -y \
+    gdb \
+    gdbserver \
+    valgrind \
+    strace \
+    ltrace \
+    curl \
+    wget \
+    unzip \
+    zip \
+    tree \
+    htop \
+    nano \
+    less \
+    man-db \
+    bash-completion \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up GCC 4.9 as default and configure environment variables
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.9
+
+# Set environment variables for STOKE compilation
+ENV CC=gcc-4.9
+ENV CXX=g++-4.9
+ENV NOCVC4=1
+
+# SSH setup (from base-setup.sh)
+RUN mkdir -p /var/run/sshd \
+    && chmod 0755 /var/run/sshd \
+    && sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd \
+    && echo "export VISIBLE=now" >> /etc/profile \
+    && sed -i "s/stoke:.*/stoke:\$1\$bXW0K4Te\$5UHZQ8CHFS\/RkwfnN6.FS.:17947:0:99999:7:::/" /etc/shadow \
+    && usermod -a -G sudo stoke
+
+# Ensure stoke user has sudo access without password for development
+RUN echo "stoke ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Set up the workspace directory first
+WORKDIR /home/stoke
+RUN mkdir -p /home/stoke/stoke
+
+# Copy the current workspace content
+COPY . /home/stoke/stoke/
+
+# Set up the STOKE environment and build dependencies
+RUN chown -R stoke:stoke /home/stoke/stoke && \
+    chmod +x /home/stoke/stoke/scripts/docker/user-setup.sh
+
+# Switch to stoke user for the setup
+USER stoke
+WORKDIR /home/stoke/stoke
+
+# Set environment variables for stoke user
+RUN echo 'export CC=gcc-4.9' >> ~/.bashrc \
+    && echo 'export CXX=g++-4.9' >> ~/.bashrc \
+    && echo 'export NOCVC4=1' >> ~/.bashrc
+
+# Run the user setup script to build STOKE dependencies
+RUN /home/stoke/stoke/scripts/docker/user-setup.sh
+
+# Set up development environment
+RUN echo 'export PATH="/home/stoke/stoke/bin:$PATH"' >> ~/.bashrc \
+    && echo 'cd /home/stoke/stoke' >> ~/.bashrc \
+    && echo 'alias ll="ls -la"' >> ~/.bashrc \
+    && echo 'alias la="ls -A"' >> ~/.bashrc \
+    && echo 'alias l="ls -CF"' >> ~/.bashrc
+
+# Default to bash shell
+SHELL ["/bin/bash", "-c"]
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]

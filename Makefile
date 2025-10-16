@@ -17,13 +17,12 @@
 ## Include any variables set by the user
 -include .stoke_config
 
+NOCVC4=1
+
 ## Choose the compiler to use
-ifndef CXX
-	CXX=g++
-endif
-ifndef CC
-	CC=gcc
-endif
+CXX=g++-4.9
+CC=gcc-4.9
+
 
 ifndef STOKE_PLATFORM
 $(error STOKE_PLATFORM is not set.  Did you run ./configure.sh?)
@@ -39,7 +38,7 @@ ifndef BUILD_TYPE
 $(error BUILD_TYPE is not set. Did you run ./configure.sh?)
 endif
 ifeq ($(BUILD_TYPE), release)
-	OPT=-O3 -DNDEBUG $(MISC_OPTIONS)
+	OPT=-O3 -DNDEBUG $(MISC_OPTIONS) -DNCURSES_NOMACROS
 endif
 ifeq ($(BUILD_TYPE), debug)
 	OPT=-O2 -g $(MISC_OPTIONS)
@@ -361,7 +360,7 @@ src/ext/gtest-1.7.0/libgtest.a:
 	CXX="${CXX}" CC="${CC}" cmake src/ext/gtest-1.7.0/CMakeLists.txt
 	VERBOSE="1" $(MAKE) -C src/ext/gtest-1.7.0 -j$(NTHREADS)
 
-cvc4: $(CVC4_OUTDIR)/lib/libcvc4.so
+# cvc4: $(CVC4_OUTDIR)/lib/libcvc4.so
 .PHONY: cvc4
 
 $(CVC4_OUTDIR)/lib/libcvc4.so: $(CVC4_SRCDIR)/configure
