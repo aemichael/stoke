@@ -78,7 +78,10 @@ CXX_FLAGS += -DNOCVC4=1
 endif
 
 WARNING_FLAGS=-Wall -Werror=switch -Wextra -Wfatal-errors -Wno-deprecated -Wno-unused-parameter -Wno-unused-variable -Wvla -fdiagnostics-color=always -Wno-ignored-qualifiers
-STOKE_CXX=ccache $(CXX) $(CXX_FLAGS) -std=c++14 $(WARNING_FLAGS)
+# Use the old ABI to match GCC 4.9 default and avoid JSON linking issues
+# This ensures compatibility between STOKE code and all dependencies (x64asm, jsoncpp)
+ABI_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0
+STOKE_CXX=ccache $(CXX) $(CXX_FLAGS) -std=c++14 $(ABI_FLAGS) $(WARNING_FLAGS)
 CVC4_SRCDIR=src/ext/cvc4-1.5
 CVC4_OUTDIR=$(CVC4_SRCDIR)-build
 CVC4_OUTDIR_ABS=$(shell pwd)/$(CVC4_OUTDIR)
@@ -443,7 +446,9 @@ TEST_OBJ=\
          src/ext/gtest-1.7.0/libgtest.a \
          src/ext/gtest-1.7.0/libgtest_main.a
 
-TEST_LIBS=-ljsoncpp
+# Use custom jsoncpp compiled with old ABI if available, fallback to system
+# Priority: 1) containerized lib, 2) local custom lib, 3) system lib
+TEST_LIBS=$(shell if [ -f /usr/local/stoke/lib/libjsoncpp.a ]; then echo /usr/local/stoke/lib/libjsoncpp.a; elif [ -f src/ext/libjsoncpp.a ]; then echo src/ext/libjsoncpp.a; else echo -ljsoncpp; fi)
 
 TEST_BIN=bin/stoke_test
 
@@ -453,7 +458,7 @@ tests/validator/handlers.h: .FORCE
 	rm -f tests/validator/handlers-tmp
 
 tests/%.o: tests/%.cc tests/%.h
-	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) -c $< -o $@ $(TEST_LIBS)
+	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) -c $< -o $@
 
 bin/stoke_test: tools/apps/stoke_test.cc $(DEPS) $(SRC_OBJ) $(TEST_OBJ) $(TOOL_NON_ARG_OBJ) $(wildcard src/*/*.h) $(wildcard tests/*.h) $(wildcard tests/*/*.h) $(wildcard tests/*/*/*.h) tests/validator/handlers.h
 	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) $< -o $@ $(SRC_OBJ) $(TEST_OBJ) $(TOOL_NON_ARG_OBJ) $(LIB) $(LDFLAGS) $(TEST_LIBS)
