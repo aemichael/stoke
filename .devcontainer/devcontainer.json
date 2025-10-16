@@ -8,14 +8,15 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
-		"ghcr.io/devcontainers/features/github-cli:1": {}
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/common-utils:2": {}
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [22],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "echo 'STOKE development container ready!'",
+	"postCreateCommand": "echo 'STOKE development container ready!' && git config --global --add safe.directory /home/stoke/stoke",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -34,7 +35,7 @@
 			"settings": {
 				"C_Cpp.default.cppStandard": "c++11",
 				"C_Cpp.default.cStandard": "c11",
-				"C_Cpp.default.compilerPath": "/usr/bin/g++-7",
+				"C_Cpp.default.compilerPath": "/usr/bin/g++-4.9",
 				"files.associations": {
 					"*.s": "asm-intel-x86-generic",
 					"*.asm": "asm-intel-x86-generic"
