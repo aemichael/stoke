@@ -13,17 +13,19 @@
 // limitations under the License.
 
 #include "src/cost/leakage.h"
+#include "src/ext/x64asm/include/x64asm.h"
 #include <algorithm>
 
 using namespace std;
+using namespace x64asm;
 
 namespace stoke {
 
 LeakageCost::result_type LeakageCost::operator()(const Cfg& cfg, Cost max) {
   // Clear previous leakage data
-  leakage_monitor.clear();
   // Determine cost based on whether leakage was detected
   Cost cost = has_leaked() ? 1 : 0;
+  leakage_monitor.clear();
   return result_type(true, cost);
 }
 
@@ -48,10 +50,11 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
       // Memory operand handling not implemented - skip for now
       continue;
     } else if (op.is_gp_register()) {
-      auto reg = op.reg();
+      auto& reg = reinterpret_cast<const x64asm::R&>(op);
       value = data.state.gp[reg].get_fixed_quad(0);
     } else if (op.is_immediate()) {
-      value = op.imm();
+      auto& imm = reinterpret_cast<const x64asm::Imm&>(op);
+      value = imm;
     }
     
     operand_values.push_back(value);
@@ -63,9 +66,9 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   }
 
   // Check if the instruction is a subq
-  if (opcode == x64asm::SUBQ_R64_R64 || opcode == x64asm::SUBQ_IMM32_R64 || 
-      opcode == x64asm::SUBQ_R64_M64 || opcode == x64asm::SUBQ_IMM32_M64 ||
-      opcode == x64asm::SUBQ_M64_R64) {
+  if (opcode == SUB_R64_R64 || opcode == SUB_R64_IMM32 || 
+      opcode == SUB_R64_M64 || opcode == SUB_M64_IMM32 ||
+      opcode == SUB_M64_R64) {
       // Update leakage patterns for each operand
       auto& entry = leakage_monitor[data.line];
       for (size_t i = 0; i < std::min(operand_values.size(), size_t(3)); ++i) {

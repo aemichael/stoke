@@ -13,11 +13,19 @@
         "_GNU_SOURCE"
     ],
     "files.associations": {
+        "*.sva": "systemverilog",
         "*.s": "asm-intel-x86-generic",
         "*.asm": "asm-intel-x86-generic",
         "*.h": "c",
         "*.cc": "cpp",
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "istream": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "memory": "cpp",
+        "variant": "cpp"
     },
     "files.exclude": {
         "**/.git": true,
