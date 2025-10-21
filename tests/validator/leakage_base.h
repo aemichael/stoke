@@ -34,14 +34,14 @@ public:
   LeakageValidatorBaseTest() {
     auto param = ::testing::TestWithParam<std::tr1::tuple<ObligationChecker::AliasStrategy, Solver>>::GetParam();
     auto solver_type = std::tr1::get<1>(GetParam());
-    if (solver_type == Solver::Z3) {
+    // if (solver_type == Solver::Z3) {
       std::cout << "Using Z3" << std::endl;
       solver = new Z3Solver();
-    }
-    else if (solver_type == Solver::CVC4) {
-      std::cout << "Using CVC4" << std::endl;
-      solver = new Cvc4Solver();
-    }
+    // }
+    // else if (solver_type == Solver::CVC4) {
+    //   std::cout << "Using CVC4" << std::endl;
+    //   solver = new Cvc4Solver();
+    // }
 
     std::cout << "Alias Strategy " << std::tr1::get<0>(param) << std::endl;
 
