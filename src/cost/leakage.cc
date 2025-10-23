@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "src/cost/leakage.h"
-#include "src/cost/leakage_descr.h"
+#include "src/validator/leakage_ranges.h"
 #include "src/ext/x64asm/include/x64asm.h"
 #include <algorithm>
 

@@ -23,16 +23,6 @@
 #include "src/sandbox/state_callback.h"
 #include "src/ext/x64asm/include/x64asm.h"
 
-// Hash specialization for x64asm::Opcode
-namespace std {
-template<>
-struct hash<x64asm::Opcode> {
-  std::size_t operator()(const x64asm::Opcode& opcode) const {
-    return std::hash<int32_t>()(static_cast<int32_t>(opcode));
-  }
-};
-}
-
 namespace stoke {
 
 class LeakageCost : public CostFunction {

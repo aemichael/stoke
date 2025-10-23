@@ -27,7 +27,7 @@ struct Partition {
 
 // Map from opcode to pair of vectors: first vector for operand 0 (R1/src), second for operand 1 (R2/dst)
 // Each vector contains partitions, where each partition represents ranges from one equivalence class
-std::unordered_map<x64asm::Opcode, std::tuple<std::vector<Partition>, std::vector<Partition>>> leakage_ranges = {
+static std::unordered_map<x64asm::Opcode, std::tuple<std::vector<Partition>, std::vector<Partition>>> leakage_ranges = {
     {x64asm::NEG_R16, std::make_tuple(std::vector<Partition>{Partition{{std::make_tuple(0, 0)}}, Partition{{std::make_tuple(1, 65535)}}}, std::vector<Partition>{})},
     {x64asm::SHL_R32_CL, std::make_tuple(std::vector<Partition>{}, std::vector<Partition>{Partition{{std::make_tuple(0, 0)}}, Partition{{std::make_tuple(1, 4294967295)}}})},
     {x64asm::SAR_R64_CL, std::make_tuple(std::vector<Partition>{}, std::vector<Partition>{Partition{{std::make_tuple(0, 0), std::make_tuple(18446744073709551615, 18446744073709551615)}}, Partition{{std::make_tuple(1, 18446744073709551614)}}})},
