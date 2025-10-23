@@ -15,4 +15,5 @@
 #include "tests/cost/binsize.h"
 #include "tests/cost/correctness.h"
 #include "tests/cost/latency.h"
+#include "tests/cost/leakage.h"
 #include "tests/cost/parser.h"
