@@ -70,7 +70,6 @@ using namespace x64asm;
 #include "tests/validator/ddec.h"
 #include "tests/validator/bounded.h"
 #include "tests/validator/leakage.h"
-#include "tests/validator/leakage_base.h"
 
 #endif
 
