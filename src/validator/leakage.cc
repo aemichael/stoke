@@ -139,7 +139,6 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
 
     // Step 3: if equality check returned ok, we now check leakage for EACH
     // rewrite path (leakage check is independent from target)
-    cout << "testing" << endl;
     if (ok) {
       bool no_lkg = true;
       for (auto rewrite_path : rewrite_paths) {

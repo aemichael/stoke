@@ -23,6 +23,7 @@
 #include "src/validator/invariants/memory_equality.h"
 #include "src/validator/invariants/state_equality.h"
 #include "src/validator/invariants/true.h"
+#include "src/validator/leakage_ranges.h"
 
 
 #define OBLIG_DEBUG(X) { }
@@ -1375,23 +1376,66 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   // Step 1: Collect input leakage constraints
   // Each top-level element represents the constraints for one equivalence class.
   vector<vector<SymBool>> constraints;
-  string opcode = Handler::get_opcode(instr);
+  auto opcode = instr.get_opcode();
 
-  // Handle just subl for now. TODO later: pull from generated leakage specs
-  if (opcode == "subl") {
-    Operand src = instr.get_operand<Operand>(1);
-    SymBitVector src_bv = state[src];
-    uint16_t width = src.size();
-    
-    cout << "SUBL SRC: " << src << " = " << src_bv << endl;
+  // Determine constraints from generated leakage ranges
+  auto eclasses = leakage_ranges.find(opcode);
+  if (eclasses != leakage_ranges.end()) {
+    int max_arity = 2; // Only consider 2 operands for now
 
-    vector<SymBool> constraints_1;
-    constraints_1.push_back(src_bv == SymBitVector::constant(width, 0));
-    constraints.push_back(constraints_1);
+    // One constraint vector per operand: each entry represents the same equivalence class
+    // as the corresponding entry in the other vector
+    vector<SymBool> src_constraints;
+    vector<SymBool> dst_constraints;
 
-    vector<SymBool> constraints_2;
-    constraints_2.push_back(src_bv != SymBitVector::constant(width, 0));
-    constraints.push_back(constraints_2);
+    for (size_t i = 0; i < max_arity; ++i) {
+      if (i >= instr.arity())
+        break;
+
+      Operand op = instr.get_operand<Operand>(i);
+      SymBitVector op_bv = state[op];
+      uint16_t width = op.size();
+
+      // Each partition contains ranges for one equivalence class
+      // Dst/src are in index 0/1, respectively, which is flipped from partition ranges
+      auto partitions = i == 0 ? std::get<1>(eclasses->second) : std::get<0>(eclasses->second);
+      for (size_t j = 0; j < partitions.size(); ++j) {
+        const auto& partition = partitions[j];
+        vector<SymBool> range_constraints;
+
+        for (const auto& range : partition.ranges) {
+          SymBitVector low = SymBitVector::constant(width, std::get<0>(range));
+          SymBitVector high = SymBitVector::constant(width, std::get<1>(range));
+          range_constraints.push_back((op_bv >= low) & (op_bv <= high));
+        }
+
+        // Partition constraints are the logical OR of ranges within that partition
+        SymBool partition_cond = range_constraints.size() == 1 ? range_constraints[0] :
+          std::accumulate(range_constraints.begin(), range_constraints.end(), SymBool::constant(false),
+            [](SymBool p, SymBool q){ return p|q; });
+
+        if (i == 0) {
+          dst_constraints.push_back(partition_cond);
+        } else {
+          src_constraints.push_back(partition_cond);
+        }
+      }
+    }
+
+    // If the instruction has arity > 1, combine constraints from both operands
+    if (instr.arity() > 1) {
+      assert(src_constraints.size() == dst_constraints.size());
+      for (size_t i = 0; i < src_constraints.size(); ++i) {
+        SymBool cond = src_constraints[i] & dst_constraints[i];
+        constraints.push_back({cond});
+        cout << "Added partition condition: " << cond << endl;
+      }
+    } else {
+      for (auto constraint : src_constraints) {
+        constraints.push_back({constraint});
+        cout << "Added partition condition: " << constraint << endl;
+      }
+    }
   }
 
   // Step 2: Step the state forward once
@@ -1443,8 +1487,8 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
     }
 
     // AEM: I'm not really sure what this does, just leaving it in for now
-    auto constraints = (*filter_)(instr, state);
-    for (auto constraint : constraints) {
+    auto state_constraints = (*filter_)(instr, state);
+    for (auto constraint : state_constraints) {
       state.constraints.push_back(constraint);
     }
 
@@ -1523,7 +1567,7 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
       // Check input leakage first, then step the state forward
       // Will need changes if we want to check leakage on output too
       no_lkg &= check_instr_leakage(cfg, j, is_jump(cfg,bb,P,i), state, line_no, line_map);
-      cout << "Leakage as of index " << j << ": " << no_lkg << endl;
+      cout << "Has leakage as of index " << j << "? " << !no_lkg << endl;
     }
   }
 

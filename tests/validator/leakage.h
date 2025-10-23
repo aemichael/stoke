@@ -255,6 +255,7 @@ TEST_P(LeakageValidatorLeakageTest, SimpleSublTransformNonLeaky) {
   std::stringstream ssr;
   ssr << ".foo:" << std::endl;
   ssr << "movq %rcx, %r11" << std::endl;
+  ssr << "movl %ecx, %ecx" << std::endl;
   ssr << "subq $0x80000000, %rcx" << std::endl;
   ssr << "subq $0x80000000, %rcx" << std::endl;
   ssr << "subq %rcx, %rax" << std::endl;
