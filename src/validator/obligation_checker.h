@@ -31,6 +31,7 @@
 #include "src/validator/invariant.h"
 #include "src/validator/validator.h"
 #include "src/validator/filters/default.h"
+#include "src/validator/leakage_ranges.h"
 
 //#define DEBUG_CHECKER_PERFORMANCE
 
@@ -232,6 +233,9 @@ private:
  
   /** Check leakage for single instruction */
   bool check_instr_leakage(const Cfg&, Cfg::id_type, JumpType, SymState&, size_t& line_no, const LineMap& line_map);
+
+  /** Helper to build symbolic condition representing a single leakage partition */
+  SymBool build_leakage_partition(Partition&, SymBitVector&, uint16_t& width);
 
   // This is to print out Cfg paths easily (for debugging purposes).
   static std::string print(const CfgPath& p) {

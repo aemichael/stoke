@@ -119,8 +119,6 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
     for (auto target_path : target_paths) {
       for (auto rewrite_path : rewrite_paths) {
 
-        LEAKAGE_DEBUG(cout << "[lv] Checking pair: " << target_path << "; " << rewrite_path << endl;)
-
         count++;
         ok &= verify_pair(target, rewrite, target_path, rewrite_path);
 

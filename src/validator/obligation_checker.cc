@@ -1362,6 +1362,23 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
 
 }
 
+
+SymBool ObligationChecker::build_leakage_partition(Partition& partition, SymBitVector& op_bv, uint16_t& width) {
+  vector<SymBool> range_constraints;
+
+  for (const auto& range : partition.ranges) {
+    SymBitVector low = SymBitVector::constant(width, std::get<0>(range));
+    SymBitVector high = SymBitVector::constant(width, std::get<1>(range));
+    range_constraints.push_back((op_bv >= low) & (op_bv <= high));
+  }
+
+  // Partition constraints are the logical OR of ranges within that partition
+  SymBool partition_cond = range_constraints.size() == 1 ? range_constraints[0] :
+    std::accumulate(range_constraints.begin(), range_constraints.end(), SymBool::constant(false),
+      [](SymBool p, SymBool q){ return p|q; });
+  return partition_cond;
+}
+
 // Check for leakage at the current instruction with the given starting state,
 // and build circuit to progress to next state
 bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpType jump,
@@ -1381,61 +1398,65 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   // Determine constraints from generated leakage ranges
   auto eclasses = leakage_ranges.find(opcode);
   if (eclasses != leakage_ranges.end()) {
-    int max_arity = 2; // Only consider 2 operands for now
-
-    // One constraint vector per operand: each entry represents the same equivalence class
-    // as the corresponding entry in the other vector
-    vector<SymBool> src_constraints;
-    vector<SymBool> dst_constraints;
-
-    for (size_t i = 0; i < max_arity; ++i) {
-      if (i >= instr.arity())
-        break;
-
-      Operand op = instr.get_operand<Operand>(i);
+    if (instr.arity() < 2) {
+      Operand op = instr.get_operand<Operand>(0);
       SymBitVector op_bv = state[op];
       uint16_t width = op.size();
 
-      // Each partition contains ranges for one equivalence class
-      // Dst/src are in index 0/1, respectively, which is flipped from partition ranges
-      auto partitions = i == 0 ? std::get<1>(eclasses->second) : std::get<0>(eclasses->second);
-      for (size_t j = 0; j < partitions.size(); ++j) {
-        const auto& partition = partitions[j];
-        vector<SymBool> range_constraints;
-
-        for (const auto& range : partition.ranges) {
-          SymBitVector low = SymBitVector::constant(width, std::get<0>(range));
-          SymBitVector high = SymBitVector::constant(width, std::get<1>(range));
-          range_constraints.push_back((op_bv >= low) & (op_bv <= high));
-        }
-
-        // Partition constraints are the logical OR of ranges within that partition
-        SymBool partition_cond = range_constraints.size() == 1 ? range_constraints[0] :
-          std::accumulate(range_constraints.begin(), range_constraints.end(), SymBool::constant(false),
-            [](SymBool p, SymBool q){ return p|q; });
-
-        if (i == 0) {
-          dst_constraints.push_back(partition_cond);
-        } else {
-          src_constraints.push_back(partition_cond);
-        }
-      }
-    }
-
-    // If the instruction has arity > 1, combine constraints from both operands
-    if (instr.arity() > 1) {
-      assert(src_constraints.size() == dst_constraints.size());
-      for (size_t i = 0; i < src_constraints.size(); ++i) {
-        SymBool cond = src_constraints[i] & dst_constraints[i];
-        constraints.push_back({cond});
-        cout << "Added partition condition: " << cond << endl;
-      }
-    } else {
-      for (auto constraint : src_constraints) {
+      auto partitions = std::get<0>(eclasses->second);
+      for (auto partition : partitions) {
+        SymBool constraint = build_leakage_partition(partition, op_bv, width);
         constraints.push_back({constraint});
         cout << "Added partition condition: " << constraint << endl;
       }
+
+    } else {
+      int max_arity = 2; // Only consider 2 operands for now
+
+      // One constraint vector per operand: each entry represents the same equivalence class
+      // as the corresponding entry in the other vector
+      vector<SymBool> src_constraints;
+      vector<SymBool> dst_constraints;
+
+      for (size_t i = 0; i < max_arity; ++i) {
+        Operand op = instr.get_operand<Operand>(i);
+        SymBitVector op_bv = state[op];
+        uint16_t width = op.size();
+
+        // Each partition contains ranges for one equivalence class
+        // Dst/src are in index 0/1, respectively, which is flipped from partition ranges
+        auto partitions = i == 0 ? std::get<1>(eclasses->second) : std::get<0>(eclasses->second);
+        for (auto partition : partitions) {
+          SymBool partition_cond = build_leakage_partition(partition, op_bv, width);
+          if (i == 0) {
+            dst_constraints.push_back(partition_cond);
+          } else {
+            src_constraints.push_back(partition_cond);
+          }
+        }
+      }
+
+      if (src_constraints.size() == dst_constraints.size()) {
+        for (size_t i = 0; i < src_constraints.size(); ++i) {
+          SymBool cond = src_constraints[i] & dst_constraints[i];
+          constraints.push_back({cond});
+          cout << "Added partition condition: " << cond << endl;
+        }
+      } else if (src_constraints.size() == 0) {
+        for (auto cond : dst_constraints) {
+          constraints.push_back({cond});
+          cout << "Added partition condition: " << cond << endl;
+        }
+      } else {
+        assert(dst_constraints.size() == 0);
+        for (auto cond : src_constraints) {
+          constraints.push_back({cond});
+          cout << "Added partition condition: " << cond << endl;
+        }
+      }
     }
+  } else {
+    cout << "Opcode " << opcode << " not found in leakage table" << endl;
   }
 
   // Step 2: Step the state forward once
