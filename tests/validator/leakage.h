@@ -88,6 +88,11 @@ protected:
     return rs;
   }
 
+  static x64asm::RegSet omit_caller_saved() {
+    auto rs = (x64asm::RegSet::linux_call_preserved() | x64asm::RegSet::linux_call_return());
+    return rs;
+  }
+
   void fail() {
     FAIL();
   }
@@ -535,6 +540,132 @@ TEST_P(LeakageValidatorTest, AddwSrcOperandLeaky) {
   ssr << ".foo:" << std::endl;
   ssr << "movw $5, %ax" << std::endl;
   ssr << "addw %cx, %ax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, SimpleNeglLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "negl %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "negl %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, AndlSrcOperandLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $0xFF, %eax" << std::endl;
+  sst << "andl %ecx, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $0xFF, %eax" << std::endl;
+  ssr << "andl %ecx, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, AndlDstOperandLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $0xFF, %ecx" << std::endl;
+  sst << "andl %ecx, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $0xFF, %ecx" << std::endl;
+  ssr << "andl %ecx, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, ShllBy1Leaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "shll $1, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "shll $1, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, ShllByImmLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "shll $8, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "shll $8, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, ShllByClLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movb $8, %cl" << std::endl;
+  sst << "shll %cl, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movb $8, %cl" << std::endl;
+  ssr << "shll $8, %eax" << std::endl;
   ssr << "retq" << std::endl;
   auto rewrite = make_cfg(ssr, live_outs, live_outs);
 

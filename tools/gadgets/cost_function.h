@@ -58,7 +58,7 @@ private:
     st["size"] =         new SizeCost();
     st["sseavx"] =       new SseAvxCost();
     st["nongoal"] =      new NonGoalCostGadget(target);
-    st["leakage"] =     new LeakageCost();
+    st["leakage"] =      new LeakageCost();
 
     CostParser cost_p(cost_function_arg.value(), st);
     auto cost_fxn = cost_p.run();

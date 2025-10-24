@@ -38,6 +38,7 @@ cpputil::ValueArg<std::string, cpputil::LineReader<>>& cost_function_arg =
 # - arithmetic operators: + - * / % == << >> < > >= <= & |
 # - binsize: Size of the binary
 # - correctness: Correctness according to the testcases
+# - leakage: Leakiness according to the leakage semantics
 # - latency: Latency of the instructions
 # - measured: Measured latency (more precise for loops than 'latency')
 # - size: The number of instructions
