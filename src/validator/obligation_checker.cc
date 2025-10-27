@@ -1529,7 +1529,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
 
     bool is_sat = solver_.is_sat(constraints[i]);
     if (solver_.has_error()) {
-      throw VALIDATOR_ERROR("solver: " + solver_.get_error());
+      throw VALIDATOR_ERROR("[lv] solver: " + solver_.get_error());
     }
 
     // "Leaky" means there are possible paths through this instruction that
@@ -1556,10 +1556,6 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
 bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
   bool no_lkg = true;
   SymState state("INIT");
-
-  cout << "Checking for leakage on path:" << endl;
-  print(P);
-  cout << endl;
   
   // We don't consider memory instructions for leakage, but we do have to model it
   // for accurate data flow
@@ -1569,7 +1565,6 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
   // Unroll CFG with line numbers for circuit-building
   LineMap line_map;
   rewrite_cfg_with_path(cfg, P, line_map);
-  cout << "Line map: " << line_map.size() << endl;
 
   // Step through the path instruction-by-instruction to check for leakage
   size_t line_no = 0;
@@ -1577,8 +1572,6 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
     auto bb = P[i];
     if (cfg.num_instrs(bb) == 0)
       continue;
-
-    cout << "Examining BB: " << bb << endl;
 
     size_t start_index = cfg.get_index(std::pair<Cfg::id_type, size_t>(bb, 0));
     size_t end_index = start_index + cfg.num_instrs(bb);
