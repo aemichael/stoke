@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-all: orig extract testcase_smt synthesize replace
+all: orig extract testcase_leakage synthesize replace
 
 orig:
 	g++ -std=c++11 -fno-inline -O3 main.cc
@@ -26,11 +26,15 @@ extract:
 
 testcase_random:
 	mkdir -p tcs
-	stoke testcase --target bins/_Z11transform32jj.s -o tcs/_Z11transform32jj
+	stoke testcase --target bins/_Z9transformjj.s -o tcs/_Z9transformjj --max_testcases 1024
 
 testcase_smt:
 	mkdir -p tcs
-	stoke_tcgen --bound 64 --target bins/_Z11transform32jj.s --output tcs/_Z11transform32jj
+	stoke_tcgen --bound 64 --target bins/_Z9transformjj.s --output tcs/_Z9transformjj --max_tcs 1024
+
+testcase_leakage:
+	mkdir -p tcs
+	tcgen_leakage --bound 64 --target bins/_Z9transformjj.s --output tcs/_Z9transformjj
 
 testcase_pin:
 	stoke testcase --config testcase.conf
@@ -38,7 +42,7 @@ testcase_pin:
 testcase: testcase_random
 
 synthesize:
-	stoke synthesize --config synthesize.conf
+	stoke_search --config synthesize.conf
 
 # 'make check' should always work unless there's
 # a bug in 'stoke debug verify' or 'stoke synthesize'
@@ -52,4 +56,4 @@ replace:
 	stoke replace --config replace.conf
 
 clean:
-	rm -rf bins ./a.out *.tc *.s tcs
+	rm -rf bins ./a.out *.tc tcs

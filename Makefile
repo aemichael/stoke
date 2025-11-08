@@ -250,6 +250,7 @@ BIN=\
 	bin/stoke_search \
 	bin/stoke_testcase \
 	bin/stoke_tcgen \
+	bin/tcgen_leakage \
 	bin/stoke_rename \
 	\
 	bin/stoke_support_list \

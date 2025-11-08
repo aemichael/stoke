@@ -19,8 +19,8 @@
 
 using namespace std;
 
-uint32_t transform32(uint32_t x, uint32_t y) {
-  return x - y;
+uint32_t transform(uint32_t x, uint32_t y) {
+  return x & y;
 }
 
 int main(int argc, char** argv) {
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     // around the 64-bit limit).
 
     j = (j*3 + 7 + (rand() % 5));
-    ret += transform32(j, i);
+    ret += transform(j, i);
   }
 
   return ret;

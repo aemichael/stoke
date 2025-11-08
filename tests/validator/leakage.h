@@ -611,6 +611,34 @@ TEST_P(LeakageValidatorTest, AndlDstOperandLeaky) {
   EXPECT_FALSE(validator->has_error()) << validator->error();
 }
 
+TEST_P(LeakageValidatorTest, AndlTransformNotLeaky) {
+  auto def_in = all();
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "andl %esi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_in, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "subq $0x80000000, %rax" << std::endl;
+  ssr << "subq $0x80000000, %rax" << std::endl;
+  ssr << "movl %esi, %esi" << std::endl;
+  ssr << "subq $0x80000000, %rsi" << std::endl;
+  ssr << "subq $0x80000000, %rsi" << std::endl;
+  ssr << "andq %rsi, %rax" << std::endl;
+  ssr << "movl %eax, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_in, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
 TEST_P(LeakageValidatorTest, ShllBy1Leaky) {
 
   auto live_outs = omit_caller_saved();

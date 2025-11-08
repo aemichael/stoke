@@ -26,6 +26,7 @@ LeakageCost::result_type LeakageCost::operator()(const Cfg& cfg, Cost max) {
   // Clear previous leakage data
   // Determine cost based on whether leakage was detected
   Cost cost = has_leaked() ? 1 : 0;
+  num_callbacks = 0;
   leakage_monitor.clear();
   return result_type(true, cost);
 }
@@ -78,6 +79,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
 }
 
 bool LeakageCost::has_leaked() const {
+  // cout << "[lc] Querying leakage cost after " << num_callbacks << " callbacks" << endl;
   auto is_power_of_2_or_zero = [](int value) {
     return value == 0 || (value > 0 && (value & (value - 1)) == 0);
   };
@@ -93,12 +95,14 @@ bool LeakageCost::has_leaked() const {
   return false;
 }
 
-int LeakageCost::get_leakage_mask(uint64_t value, x64asm::Opcode& opcode, size_t operand_index) const {
+int LeakageCost::get_leakage_mask(uint64_t value, x64asm::Opcode& opcode, size_t operand_index) {
   // Determine leakage mask based on value and opcode
   auto it = leakage_ranges.find(opcode);
   if (it == leakage_ranges.end()) {
     return 0; // No leakage information for this opcode
   }
+
+  num_callbacks++;
 
   // Our leakage_ranges tuple only has 2 elements (operand 0 and 1)
   // If operand_index is 2 or higher, return 0 (no leakage info)

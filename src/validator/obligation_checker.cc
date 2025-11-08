@@ -1386,7 +1386,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   auto li = line_map.at(line_no);
   line_no++;
   auto instr = cfg.get_code()[index];
-  cout << "Instr at index " << index << ", line " << line_no-1 << ": " << instr << endl;
+  // cout << "Instr at index " << index << ", line " << line_no-1 << ": " << instr << endl;
 
   bool is_leaky = false;
 
@@ -1398,6 +1398,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   // Determine constraints from generated leakage ranges
   auto eclasses = leakage_ranges.find(opcode);
   if (eclasses != leakage_ranges.end()) {
+    cout << "Checking leakage for " << opcode << endl;
     if (instr.arity() < 2) {
       Operand op = instr.get_operand<Operand>(0);
       SymBitVector op_bv = state[op];
@@ -1455,9 +1456,10 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
         }
       }
     }
-  } else {
-    cout << "Opcode " << opcode << " not found in leakage table" << endl;
   }
+  // else {
+  //   cout << "Opcode " << opcode << " not found in leakage table" << endl;
+  // }
 
   // Step 2: Step the state forward once
   // Logic copied from build_circuit. Not using state.constraints for now,
@@ -1525,7 +1527,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
 
   // Check all sets of leakage constraints
   for (size_t i = 0; i < constraints.size(); ++i) {
-    cout << "Checking leakage for constraint set " << i << endl;
+    // cout << "Checking leakage for constraint set " << i << endl;
 
     bool is_sat = solver_.is_sat(constraints[i]);
     if (solver_.has_error()) {
@@ -1540,7 +1542,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
       is_leaky = true;
 
     } else if (is_sat) {
-      cout << "Found SAT" << endl;
+      // cout << "Found SAT" << endl;
       has_sat = true;
     }
 
@@ -1581,7 +1583,7 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
       // Check input leakage first, then step the state forward
       // Will need changes if we want to check leakage on output too
       no_lkg &= check_instr_leakage(cfg, j, is_jump(cfg,bb,P,i), state, line_no, line_map);
-      cout << "Has leakage as of index " << j << "? " << !no_lkg << endl;
+      // cout << "Has leakage as of index " << j << "? " << !no_lkg << endl;
     }
   }
 

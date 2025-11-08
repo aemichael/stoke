@@ -30,6 +30,7 @@ class LeakageCost : public CostFunction {
 public:
   LeakageCost() {
     set_run_test_sandbox(true);
+    num_callbacks = 0;
   }
 
   virtual bool need_test_sandbox() {
@@ -49,13 +50,15 @@ public:
   static void leakage_callback_wrapper(const StateCallbackData& data, void* arg);
 
 private:
+  int num_callbacks;
+
   /** Instance method to handle leakage tracking */
   void leakage_callback(const StateCallbackData& data);
 
   /** Check if any leakage has been detected */
   bool has_leaked() const;
 
-  int get_leakage_mask(uint64_t value, x64asm::Opcode& opcode, size_t operand_index) const;
+  int get_leakage_mask(uint64_t value, x64asm::Opcode& opcode, size_t operand_index);
 
   /** Leakage monitoring map: line number -> (operand0_mask, operand1_mask, operand2_mask) */
   std::unordered_map<int, std::tuple<int, int, int>> leakage_monitor;
