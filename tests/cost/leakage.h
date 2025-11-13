@@ -34,13 +34,15 @@ public:
 
 protected:
 
-  void add_testcases(int count) {
+  void add_testcases_for_zero(int count) {
     for (int i = 0; i < count; ++i) {
       auto state = get_state();
       
-      // The 10th testcase will set rax to zero to trigger leakage
+      // The 10th testcase will set all registers to zero to trigger leakage
       if (i == 9) {
-        state.gp[x64asm::rax].get_fixed_quad(0) = 0;
+        for (size_t j = 0; j < state.gp.size(); ++j) {
+          state.gp[j].get_fixed_quad(0) = 0;
+        }
       }
       
       // std::cout << "Adding testcase " << i << ": " << state << std::endl;
@@ -75,7 +77,7 @@ private:
 TEST_F(LeakageCostTest, SingleSubqReturnsOne) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases(10);
+  add_testcases_for_zero(10);
 
   // Setup
   std::stringstream ss;
@@ -104,7 +106,7 @@ TEST_F(LeakageCostTest, SingleSubqReturnsOne) {
 TEST_F(LeakageCostTest, SingleSubqReturnsZero) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases(9);
+  add_testcases_for_zero(9);
 
   // Setup
   std::stringstream ss;
@@ -129,5 +131,37 @@ TEST_F(LeakageCostTest, SingleSubqReturnsZero) {
   EXPECT_TRUE(result.first);  // Should be successful
   EXPECT_EQ(0ul, result.second);  // Cost should be 0 for no leakage
 }
+
+TEST_F(LeakageCostTest, AndqSrcLeakageReturnsOne) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl %edi, %eax" << std::endl;
+  ss << "subq $0x80000000, %rax" << std::endl;
+  ss << "andq %rsi, %rax" << std::endl;
+  ss << "movl %eax, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leakag
+}       
 
 } //namespace

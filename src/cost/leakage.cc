@@ -64,63 +64,71 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
 
   // Initialize leakage_monitor entry if it doesn't exist
   if (leakage_monitor.find(data.line) == leakage_monitor.end()) {
-    leakage_monitor[data.line] = std::make_tuple(0, 0, 0);
+    leakage_monitor[data.line] = 0;
   }
 
-  auto& entry = leakage_monitor[data.line];
-  for (size_t i = 0; i < std::min(operand_values.size(), size_t(3)); ++i) {
-    int mask = get_leakage_mask(operand_values[i], opcode, i);
-    switch (i) {
-      case 0: std::get<0>(entry) |= mask; break;
-      case 1: std::get<1>(entry) |= mask; break;
-      case 2: std::get<2>(entry) |= mask; break;
-    }
-  }
+  int mask = get_leakage_mask(operand_values, opcode);
+  leakage_monitor[data.line] |= mask;
 }
 
 bool LeakageCost::has_leaked() const {
-  // cout << "[lc] Querying leakage cost after " << num_callbacks << " callbacks" << endl;
   auto is_power_of_2_or_zero = [](int value) {
     return value == 0 || (value > 0 && (value & (value - 1)) == 0);
   };
   
-  for (const auto& entry : leakage_monitor) {
-    const auto& tuple = entry.second;
-    if (!is_power_of_2_or_zero(std::get<0>(tuple)) ||
-        !is_power_of_2_or_zero(std::get<1>(tuple)) ||
-        !is_power_of_2_or_zero(std::get<2>(tuple))) {
+  for (const auto& kv : leakage_monitor) {
+    const auto& entry = kv.second;
+    if (!is_power_of_2_or_zero(entry)) {
       return true;
     }
   }
   return false;
 }
 
-int LeakageCost::get_leakage_mask(uint64_t value, x64asm::Opcode& opcode, size_t operand_index) {
+int LeakageCost::get_leakage_mask(std::vector<uint64_t>& values, x64asm::Opcode& opcode) {
   // Determine leakage mask based on value and opcode
   auto it = leakage_ranges.find(opcode);
   if (it == leakage_ranges.end()) {
+    cout << "No leakage info for " << opcode << endl;
     return 0; // No leakage information for this opcode
   }
 
   num_callbacks++;
 
-  // Our leakage_ranges tuple only has 2 elements (operand 0 and 1)
-  // If operand_index is 2 or higher, return 0 (no leakage info)
-  if (operand_index >= 2) {
-    return 0;
-  }
+  const auto& op1_partitions = std::get<0>(it->second);
+  const auto& op2_partitions = std::get<1>(it->second);
+  assert(op1_partitions.size() == op2_partitions.size());
 
-  const auto& partitions = (operand_index == 0) ? std::get<0>(it->second) : std::get<1>(it->second);
-  for (size_t i = 0; i < partitions.size(); ++i) {
-    const auto& partition = partitions[i];
-    for (const auto& range : partition.ranges) {
+  auto op1_value = values[0];
+  auto op2_value = values[1];
+
+  for (size_t i = 0; i < op1_partitions.size(); ++i) {
+    // For each partition, check whether ALL operands fall into this partition
+    const auto& op1_partition = op1_partitions[i];
+    const auto& op2_partition = op2_partitions[i];
+    bool op1_in_partition = false;
+    bool op2_in_partition = false;
+
+    for (const auto& range : op1_partition.ranges) {
       int low = std::get<0>(range);
       int high = std::get<1>(range);
-      if (value >= static_cast<uint64_t>(low) && value <= static_cast<uint64_t>(high)) {
-        return 1 << (i + 1); // Return the corresponding mask bit
+      if (op1_value >= static_cast<uint64_t>(low) && op1_value <= static_cast<uint64_t>(high)) {
+        op1_in_partition = true;
       }
     }
+
+    for (const auto& range : op2_partition.ranges) {
+      int low = std::get<0>(range);
+      int high = std::get<1>(range);
+      if (op2_value >= static_cast<uint64_t>(low) && op2_value <= static_cast<uint64_t>(high)) {
+        op2_in_partition = true;
+      }
+    }
+
+    if (op1_in_partition && op2_in_partition)
+      return 1 << (i + 1);
   }
+
   return 1; // Value does not fall into any partition
 }
 

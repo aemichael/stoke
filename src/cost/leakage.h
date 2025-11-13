@@ -58,10 +58,10 @@ private:
   /** Check if any leakage has been detected */
   bool has_leaked() const;
 
-  int get_leakage_mask(uint64_t value, x64asm::Opcode& opcode, size_t operand_index);
+  int get_leakage_mask(std::vector<uint64_t>& values, x64asm::Opcode& opcode);
 
-  /** Leakage monitoring map: line number -> (operand0_mask, operand1_mask, operand2_mask) */
-  std::unordered_map<int, std::tuple<int, int, int>> leakage_monitor;
+  /** Leakage monitoring map: line number -> equivalence class mask */
+  std::unordered_map<int, int> leakage_monitor;
 };
 
 } // namespace stoke
