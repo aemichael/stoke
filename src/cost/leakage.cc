@@ -86,50 +86,46 @@ bool LeakageCost::has_leaked() const {
 }
 
 int LeakageCost::get_leakage_mask(std::vector<uint64_t>& values, x64asm::Opcode& opcode) {
-  // Determine leakage mask based on value and opcode
+  if (values.size() < 1) {
+    return 0; // No operand values to check against partition ranges
+  }
+
+  // Determine leakage mask based on values and opcode
   auto it = leakage_ranges.find(opcode);
   if (it == leakage_ranges.end()) {
-    cout << "No leakage info for " << opcode << endl;
     return 0; // No leakage information for this opcode
   }
 
   num_callbacks++;
 
-  const auto& op1_partitions = std::get<0>(it->second);
-  const auto& op2_partitions = std::get<1>(it->second);
-  assert(op1_partitions.size() == op2_partitions.size());
+  const std::vector<std::vector<Partition>> partitions = {std::get<0>(it->second),  std::get<1>(it->second)};
+  auto partition_size = partitions[0].size();
 
-  auto op1_value = values[0];
-  auto op2_value = values[1];
-
-  for (size_t i = 0; i < op1_partitions.size(); ++i) {
+  for (size_t i = 0; i < partition_size; ++i) {
     // For each partition, check whether ALL operands fall into this partition
-    const auto& op1_partition = op1_partitions[i];
-    const auto& op2_partition = op2_partitions[i];
-    bool op1_in_partition = false;
-    bool op2_in_partition = false;
+    bool all_ops_in_partition = true;
 
-    for (const auto& range : op1_partition.ranges) {
-      int low = std::get<0>(range);
-      int high = std::get<1>(range);
-      if (op1_value >= static_cast<uint64_t>(low) && op1_value <= static_cast<uint64_t>(high)) {
-        op1_in_partition = true;
+    for (size_t j = 0; j < values.size(); j++) {
+      auto value = values[j];
+      bool val_in_partition = false;
+
+      for (const auto& range : partitions[j][i].ranges) {
+        int low = std::get<0>(range);
+        int high = std::get<1>(range);
+        if (value < static_cast<uint64_t>(low) || value > static_cast<uint64_t>(high)) {
+          val_in_partition = true;
+        }
       }
+
+      all_ops_in_partition = all_ops_in_partition && val_in_partition;
     }
 
-    for (const auto& range : op2_partition.ranges) {
-      int low = std::get<0>(range);
-      int high = std::get<1>(range);
-      if (op2_value >= static_cast<uint64_t>(low) && op2_value <= static_cast<uint64_t>(high)) {
-        op2_in_partition = true;
-      }
-    }
-
-    if (op1_in_partition && op2_in_partition)
+    if (all_ops_in_partition)
       return 1 << (i + 1);
   }
 
-  return 1; // Value does not fall into any partition
+  // Value does not fall into any partition
+  return 1;
 }
 
 } // namespace stoke
