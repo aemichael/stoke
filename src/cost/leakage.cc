@@ -105,14 +105,14 @@ int LeakageCost::get_leakage_mask(std::vector<uint64_t>& values, x64asm::Opcode&
     // For each partition, check whether ALL operands fall into this partition
     bool all_ops_in_partition = true;
 
-    for (size_t j = 0; j < values.size(); j++) {
+    for (size_t j = 0; j < values.size() && all_ops_in_partition; j++) {
       auto value = values[j];
       bool val_in_partition = false;
 
       for (const auto& range : partitions[j][i].ranges) {
         int low = std::get<0>(range);
         int high = std::get<1>(range);
-        if (value < static_cast<uint64_t>(low) || value > static_cast<uint64_t>(high)) {
+        if (value >= static_cast<uint64_t>(low) && value <= static_cast<uint64_t>(high)) {
           val_in_partition = true;
         }
       }

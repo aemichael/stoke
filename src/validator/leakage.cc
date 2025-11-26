@@ -155,6 +155,7 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
       cout << "[lv] FAILED correctness check" << endl;
     }
 
+    reset_mm();
     return ok;
 
   } catch (validator_error e) {
