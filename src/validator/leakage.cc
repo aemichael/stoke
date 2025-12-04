@@ -77,7 +77,6 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
 #endif
   // State
   counterexamples_.clear();
-  leakage_counterexamples_.clear();
 
   vector<CfgPath> target_paths;
   vector<CfgPath> rewrite_paths;
@@ -142,7 +141,13 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
       bool no_lkg = true;
       for (auto rewrite_path : rewrite_paths) {
         no_lkg &= check_no_leakage_on_path(rewrite, rewrite_path);
-        if (bailout_ && !no_lkg && leakage_counterexamples_.size() > 0)
+
+        if (checker_has_leakage_ceg()) {
+          assert(!no_lkg);
+          counterexamples_.push_back(checker_get_leakage_ceg());
+        }
+
+        if (bailout_ && !no_lkg && checker_has_leakage_ceg())
           break;
       }
       if (no_lkg) {

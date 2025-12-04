@@ -139,6 +139,13 @@ public:
     return ceg_rf_;
   }
 
+  bool checker_has_leakage_ceg() {
+    return have_leakage_ceg_;
+  }
+
+  CpuState checker_get_leakage_ceg() {
+    return ceg_rl_;
+  }
 
 
 private:
@@ -275,6 +282,11 @@ private:
   CpuState ceg_rf_;
   /** Do we have a counterexample? */
   bool have_ceg_;
+
+  /** Rewrite leakage counterexample */
+  CpuState ceg_rl_;
+  /** Do we have a counterexample? */
+  bool have_leakage_ceg_;
 
 
 

@@ -81,15 +81,6 @@ public:
     return counterexamples_;
   }
 
-  /** Returns whether the last leakage counterexample made sense */
-  size_t lkg_counter_examples_available() {
-    return leakage_counterexamples_.size();
-  }
-  /** Gets the leakage counterexample */
-  virtual std::vector<CpuState> get_lkg_counter_examples() {
-    return leakage_counterexamples_;
-  }
-
   /** Get the expected final state of the target after running counterexample.
     (This is only for the fuzz tester, basically).  It is only valid if we just
     returned a counterexample.  It also doesn't handle memory writes right. */
@@ -118,9 +109,6 @@ private:
 
   /** The set of counterexamples (one per pair) that we've found. */
   std::vector<CpuState> counterexamples_;
-
-  /** The set of counterexamples exhibiting leakage that we've found. */
-  std::vector<CpuState> leakage_counterexamples_;
 
 };
 

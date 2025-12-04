@@ -1537,10 +1537,8 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
     // "Leaky" means there are possible paths through this instruction that
     // fall into more than one distinguishable equivalence class
     if (is_sat && has_sat) {
-      // TODO record counterexamples
       cout << "Found leakage" << endl;
       is_leaky = true;
-
     } else if (is_sat) {
       // cout << "Found SAT" << endl;
       has_sat = true;
@@ -1557,6 +1555,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
 
 bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
   bool no_lkg = true;
+  have_leakage_ceg_ = false;
   SymState state("INIT");
   
   // We don't consider memory instructions for leakage, but we do have to model it
@@ -1585,6 +1584,13 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
       no_lkg &= check_instr_leakage(cfg, j, is_jump(cfg,bb,P,i), state, line_no, line_map);
       // cout << "Has leakage as of index " << j << "? " << !no_lkg << endl;
     }
+  }
+
+  if (!no_lkg) {
+    ceg_rl_ = Validator::state_from_model(solver_, "INIT");
+    // Unlike in standard counterexample checking, we can't double-check a counterexample
+    // by looking at final state(s). We just trust the solver to get it right.
+    have_leakage_ceg_ = true;
   }
 
   return no_lkg;
