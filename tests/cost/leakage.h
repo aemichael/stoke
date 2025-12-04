@@ -161,7 +161,42 @@ TEST_F(LeakageCostTest, AndqSrcLeakageReturnsOne) {
 
   // Expect the cost to be 1 (indicating leakage was detected)
   EXPECT_TRUE(result.first);  // Should be successful
-  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leakag
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leakage
+}       
+
+TEST_F(LeakageCostTest, AndqPartialTransformReturnsOne) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movq %rsi, %rax" << std::endl;
+  ss << "movq $0x8000000000000000, %r11" << std::endl;
+  ss << "movw %di, %r11w" << std::endl;
+  ss << "andq %rax, %r11" << std::endl;
+  ss << "movw $1, %di" << std::endl;
+  ss << "andq %rdi, %rax" << std::endl;
+  ss << "movw %r11w, %ax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leakage
 }       
 
 } //namespace
