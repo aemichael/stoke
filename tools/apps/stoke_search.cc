@@ -103,6 +103,12 @@ auto& failed_verification_action =
   .description("Action to take when the verification at the end fails")
   .default_val(FailedVerificationAction::ADD_COUNTEREXAMPLE);
 
+auto& cache_verification_arg =
+  ValueArg<bool>::create("cache_verification_results")
+  .usage("<bool>")
+  .description("Whether to cache the results of verifying most recent best correct rewrite")
+  .default_val(true);
+
 auto& cycle_timeout_arg =
   ValueArg<string, cpputil::LineReader<>>::create("cycle_timeout")
   .usage("<string>")
@@ -129,6 +135,7 @@ void sep(ostream& os, string c = "*") {
 static Cost lowest_cost = 0;
 static Cost lowest_correct = 0;
 static Cost starting_cost = 0;
+static std::pair<bool,bool> best_correct_verified = std::pair<bool,bool>(false, false);
 
 void show_state(const SearchState& state, ostream& os) {
   ofilterstream<Column> ofs(os);
@@ -326,6 +333,8 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
 
     // verify the new best correct rewrite
     const auto verified = verifier.verify(target, res);
+    best_correct_verified.first = true;
+    best_correct_verified.second = verified;
 
     if (verifier.has_error()) {
       Console::msg() << "The verifier encountered an error: " << verifier.error() << endl << endl;
@@ -497,8 +506,16 @@ int main(int argc, char** argv) {
       Console::msg() << "Search interrupted!" << endl;
       exit(1);
     }
-
-    const auto verified = verifier.verify(target, state.best_correct);
+    
+    const bool use_cached_result = cache_verification_arg && best_correct_verified.first;
+    const auto verified = use_cached_result ? best_correct_verified.second
+                          : verifier.verify(target, state.best_correct);
+    if (use_cached_result) {
+      Console::msg() << "Using cached verification result for current best correct..." << endl;
+    } else {
+      best_correct_verified.first = true;
+      best_correct_verified.second = verified;
+    }
 
     if (verifier.has_error()) {
       Console::msg() << "The verifier encountered an error:" << endl;
@@ -526,7 +543,7 @@ int main(int argc, char** argv) {
       Console::error(1) << "Search terminated unsuccessfully; unable to discover a new rewrite!" << endl;
     }
 
-    if (!verified && verifier.counter_examples_available() && failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE) {
+    if (!verified && !use_cached_result && verifier.counter_examples_available() && failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE) {
       Console::msg() << "Restarting search using new testcase (counterexample from verifier):" << endl << endl;
       Console::msg() << verifier.get_counter_examples()[0] << endl << endl;
       training_sb.insert_input(verifier.get_counter_examples()[0]);
