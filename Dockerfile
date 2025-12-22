@@ -52,6 +52,7 @@ RUN apt-get install -y \
     openssh-server \
     pccts \
     pkg-config \
+    python \
     python3 \
     subversion \
     time \
@@ -158,4 +159,13 @@ ENTRYPOINT sudo service ssh start && bash
 # run with  docker run --name stoke-test -d -it -p 2000:22 $CONTAINER_NAME
 # that will detach it and leave it running (kill with docker kill stoke-test)
 # you may need to then fully remove it with docker container rm stoke-test)
+# 
 # ssh in with ssh -i stoke_dockerkey -p 2000 stoke@localhost
+# you may need to change permissions on stoke_dockerkey first: chmod 0600 stoke_dockerkey
+#
+# for some reason, docker doesn't copy the z3 folder correctly. To fix, run:
+#   docker exec stoke-test rm /home/stoke/stoke/src/ext/z3
+#   docker cp src/ext/z3 stoke-test:/home/stoke/stoke/src/ext
+#   docker exec stoke-test sudo chown -R stoke:stoke /home/stoke/stoke/src/ext/z3
+#
+# once done, run `make release` to avoid stoke trying to build git hooks
