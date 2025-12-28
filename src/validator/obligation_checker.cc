@@ -1363,7 +1363,7 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
 }
 
 
-SymBool ObligationChecker::build_leakage_partition(Partition& partition, SymBitVector& op_bv, uint16_t& width) {
+SymBool ObligationChecker::build_leakage_partition(const Partition& partition, SymBitVector& op_bv, uint16_t& width) {
   vector<SymBool> range_constraints;
 
   for (const auto& range : partition.ranges) {
@@ -1394,69 +1394,43 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   // Each top-level element represents the constraints for one equivalence class.
   vector<vector<SymBool>> constraints;
   auto opcode = instr.get_opcode();
+  cout << "Checking leakage for " << opcode << endl;
 
-  // Determine constraints from generated leakage ranges
-  auto eclasses = leakage_ranges.find(opcode);
-  if (eclasses != leakage_ranges.end()) {
-    cout << "Checking leakage for " << opcode << endl;
-    if (instr.arity() < 2) {
-      Operand op = instr.get_operand<Operand>(0);
-      SymBitVector op_bv = state[op];
-      uint16_t width = op.size();
-
-      auto partitions = std::get<0>(eclasses->second);
-      for (auto partition : partitions) {
-        SymBool constraint = build_leakage_partition(partition, op_bv, width);
-        constraints.push_back({constraint});
-        cout << "Added partition condition: " << constraint << endl;
-      }
-
-    } else {
-      int max_arity = 2; // Only consider 2 operands for now
-
-      // One constraint vector per operand: each entry represents the same equivalence class
-      // as the corresponding entry in the other vector
-      vector<SymBool> src_constraints;
-      vector<SymBool> dst_constraints;
-
-      for (size_t i = 0; i < max_arity; ++i) {
-        Operand op = instr.get_operand<Operand>(i);
-        SymBitVector op_bv = state[op];
-        uint16_t width = op.size();
-
-        // Each partition contains ranges for one equivalence class
-        // Dst/src are in index 0/1, respectively, which is flipped from partition ranges
-        auto partitions = i == 0 ? std::get<1>(eclasses->second) : std::get<0>(eclasses->second);
-        for (auto partition : partitions) {
-          SymBool partition_cond = build_leakage_partition(partition, op_bv, width);
-          if (i == 0) {
-            dst_constraints.push_back(partition_cond);
-          } else {
-            src_constraints.push_back(partition_cond);
-          }
-        }
-      }
-
-      if (src_constraints.size() == dst_constraints.size()) {
-        for (size_t i = 0; i < src_constraints.size(); ++i) {
-          SymBool cond = src_constraints[i] & dst_constraints[i];
-          constraints.push_back({cond});
-          cout << "Added partition condition: " << cond << endl;
-        }
-      } else if (src_constraints.size() == 0) {
-        for (auto cond : dst_constraints) {
-          constraints.push_back({cond});
-          cout << "Added partition condition: " << cond << endl;
-        }
-      } else {
-        assert(dst_constraints.size() == 0);
-        for (auto cond : src_constraints) {
-          constraints.push_back({cond});
-          cout << "Added partition condition: " << cond << endl;
-        }
-      }
+  // 1a: Collect operand SymBitVector values and widths into a map
+  unordered_map<OperandID, pair<SymBitVector, uint16_t>> operands;
+  for (size_t i = 0; i < instr.arity(); ++i) {
+    const Operand& op = instr.get_operand<Operand>(0);
+    OperandID id = getOperandId(op, i);
+    if (id != OperandID::NotSupported) {
+      operands[id] = make_pair(state[op], op.size());
     }
   }
+
+  // 1b: Determine constraints from leakage ranges and operand values
+  auto it = leakage_ranges.find(opcode);
+  if (it != leakage_ranges.end()) {
+    // Accumulate one set of constraints per equivalence class
+    for (const auto& eq_class : it->second) {
+      vector<SymBool> ec_constraints;
+
+      // Iterate over all partition maps belonging to eq_class
+      for (const auto& partition_map : eq_class.partitions) {
+        // partition constraint is the logical AND of the constraints across all input values
+        // default to true if the input values are under-specified
+        SymBool partition_constraint = SymBool::constant(true);
+        for (const auto& opv : partition_map) {
+          OperandID id = opv.first;
+          if (operands.find(id) != operands.end()) {
+            partition_constraint = partition_constraint & build_leakage_partition(
+              opv.second, operands[id].first, operands[id].second
+            );
+          }
+        }
+        ec_constraints.push_back(partition_constraint);
+      }
+      constraints.push_back(ec_constraints);
+    }
+  } // if (it != leakage_ranges.end())
   // else {
   //   cout << "Opcode " << opcode << " not found in leakage table" << endl;
   // }

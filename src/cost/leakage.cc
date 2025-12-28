@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "src/cost/leakage.h"
-#include "src/validator/leakage_ranges.h"
 #include "src/ext/x64asm/include/x64asm.h"
 #include <algorithm>
 
@@ -42,90 +41,130 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   const auto& instruction = data.code[data.line];
   auto opcode = instruction.get_opcode();
 
-  // Extract all operand values
-  std::vector<uint64_t> operand_values;
+  // Terminate early if no leakage range data for this opcode
+  if (leakage_ranges.find(opcode) == leakage_ranges.end()) {
+    return;
+  }
+  num_callbacks++;
+
+  // Extract mapped operand values from callback state
+  std::unordered_map<OperandID, uint64_t> operand_values;
   for (size_t i = 0; i < instruction.arity(); ++i) {
     const auto& op = instruction.get_operand<x64asm::Operand>(i);
-    uint64_t value = 0;
-    
-    if (op.is_typical_memory()) {
-      // Memory operand handling not implemented - skip for now
+    OperandID id = getOperandId(op, i);
+
+    // Not handled: memory operands, non-general-purpose registers, flags as implicit inputs
+    if (id == OperandID::NotSupported) {
       continue;
-    } else if (op.is_gp_register()) {
+    }
+
+    uint64_t value = 0;
+    if (op.is_gp_register()) {
       auto& reg = reinterpret_cast<const x64asm::R&>(op);
       value = data.state.gp[reg].get_fixed_quad(0);
     } else if (op.is_immediate()) {
-      auto& imm = reinterpret_cast<const x64asm::Imm&>(op);
-      value = imm;
+      value = reinterpret_cast<const x64asm::Imm&>(op);
     }
-    
-    operand_values.push_back(value);
+    operand_values[id] = value;
   }
 
-  // Initialize leakage_monitor entry if it doesn't exist
-  if (leakage_monitor.find(data.line) == leakage_monitor.end()) {
-    leakage_monitor[data.line] = 0;
+  // Record equivalence class and corresponding value ranges
+  std::pair<int,uint32_t> eq_class_and_mask = get_equivalence_class_and_partition_mask(operand_values, opcode);
+  const int eq_class = eq_class_and_mask.first;
+  if (eq_class >= 0) {
+    // Initialize leakage_monitor entry if it doesn't exist
+    // if (leakage_monitor.find(data.line) == leakage_monitor.end()) {
+    //   leakage_monitor[data.line] = new std::unordered_map<int, uint32_t>();
+    // }
+    leakage_monitor[data.line][eq_class] = eq_class_and_mask.second;
   }
-
-  int mask = get_leakage_mask(operand_values, opcode);
-  leakage_monitor[data.line] |= mask;
 }
 
 bool LeakageCost::has_leaked() const {
-  auto is_power_of_2_or_zero = [](int value) {
-    return value == 0 || (value > 0 && (value & (value - 1)) == 0);
-  };
-  
-  for (const auto& kv : leakage_monitor) {
-    const auto& entry = kv.second;
-    if (!is_power_of_2_or_zero(entry)) {
-      return true;
-    }
-  }
-  return false;
+  return num_leaky_instructions() > 0;
 }
 
-int LeakageCost::get_leakage_mask(std::vector<uint64_t>& values, x64asm::Opcode& opcode) {
-  if (values.size() < 1) {
-    return 0; // No operand values to check against partition ranges
+int LeakageCost::num_leaky_instructions() const {
+  int count = 0;
+  for (const auto& kv : leakage_monitor) {
+    if (kv.second.size()) {
+      ++count;
+    }
   }
+  return count;
+}
 
-  // Determine leakage mask based on values and opcode
+int LeakageCost::sum_equivalence_classes() const {
+  int sum = 0;
+  for (const auto& kv : leakage_monitor) {
+    sum += kv.second.size();
+  }
+  return sum;
+}
+
+int LeakageCost::sum_value_ranges() const {
+  int sum = 0;
+  for (const auto& kv : leakage_monitor) {
+    for (const auto& ec : kv.second) {
+      sum += popct(ec.second);
+    }
+  }
+  return sum;
+}
+
+std::pair<int,uint32_t> LeakageCost::get_equivalence_class_and_partition_mask(const std::unordered_map<OperandID, uint64_t>& values, x64asm::Opcode& opcode) {
   auto it = leakage_ranges.find(opcode);
   if (it == leakage_ranges.end()) {
-    return 0; // No leakage information for this opcode
+    return std::make_pair(-1, 0); // No leakage information for this opcode
   }
 
-  num_callbacks++;
+  const std::vector<EquivalenceClass>& eq_classes = it->second;
+  int eq_class = -1;
+  uint32_t value_ranges = 100;
 
-  const std::vector<std::vector<Partition>> partitions = {std::get<0>(it->second),  std::get<1>(it->second)};
-  auto partition_size = partitions[0].size();
+  // Iterate over equivalence classes until we find one that matches
+  for (size_t i = 0; eq_class < 0 && i < eq_classes.size(); ++i) {
+    if (uint32_t mask = get_partition_index_mask(eq_classes[i], values)) {
+      eq_class = i;
+      value_ranges = mask;
+    }
+  }
 
-  for (size_t i = 0; i < partition_size; ++i) {
-    // For each partition, check whether ALL operands fall into this partition
+  return std::make_pair(eq_class, value_ranges);
+}
+
+uint32_t LeakageCost::get_partition_index_mask(const EquivalenceClass& eq_class, const std::unordered_map<OperandID, uint64_t>& values) {
+  uint32_t mask = 0;
+  for (size_t i = 0; i < eq_class.partitions.size(); ++i) {
+    const auto& partition_map = eq_class.partitions[i];
+
+    // Be conservative: only disqualify a given set of operand values if at least one explicitly falls outside the partition,
+    // not if it's ambiguous (i.e., due to missing or unspecified operand values)
     bool all_ops_in_partition = true;
-
-    for (size_t j = 0; j < values.size() && all_ops_in_partition; j++) {
-      auto value = values[j];
-      bool val_in_partition = false;
-
-      for (const auto& range : partitions[j][i].ranges) {
-        int low = std::get<0>(range);
-        int high = std::get<1>(range);
-        if (value >= static_cast<uint64_t>(low) && value <= static_cast<uint64_t>(high)) {
-          val_in_partition = true;
-        }
+    for (const auto& opv : values) {
+      auto it = partition_map.find(opv.first);
+      if (it != partition_map.end() && it->second.contains(opv.second)) {
+        all_ops_in_partition = false;
+        break;
       }
-
-      all_ops_in_partition = all_ops_in_partition && val_in_partition;
     }
 
-    if (all_ops_in_partition)
-      return 1 << (i + 1);
+    // Report ALL partitions this set of operand values falls into
+    if (all_ops_in_partition) {
+      mask |= (1 << i);
+    }
   }
 
-  // Value does not fall into any partition
-  return 1;
+  return mask;
+}
+
+uint32_t LeakageCost::popct(uint32_t val) const {
+  uint32_t popct = 0;
+  while (val > 0) {
+    ++popct;
+    val = val >> 1;
+  }
+  return popct;
 }
 
 } // namespace stoke

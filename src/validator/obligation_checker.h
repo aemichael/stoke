@@ -17,6 +17,8 @@
 
 #include <iostream>
 #include <vector>
+#include <unordered_map>
+#include <utility>
 #include <string>
 
 #include "gtest/gtest_prod.h"
@@ -242,7 +244,7 @@ private:
   bool check_instr_leakage(const Cfg&, Cfg::id_type, JumpType, SymState&, size_t& line_no, const LineMap& line_map);
 
   /** Helper to build symbolic condition representing a single leakage partition */
-  SymBool build_leakage_partition(Partition&, SymBitVector&, uint16_t& width);
+  SymBool build_leakage_partition(const Partition&, SymBitVector&, uint16_t& width);
 
   // This is to print out Cfg paths easily (for debugging purposes).
   static std::string print(const CfgPath& p) {
