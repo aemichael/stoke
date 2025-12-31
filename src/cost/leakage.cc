@@ -24,10 +24,26 @@ namespace stoke {
 LeakageCost::result_type LeakageCost::operator()(const Cfg& cfg, Cost max) {
   // Clear previous leakage data
   // Determine cost based on whether leakage was detected
-  Cost cost = has_leaked() ? 1 : 0;
+  Cost cost = evaluate_current_leakage();
   num_callbacks = 0;
   leakage_monitor.clear();
   return result_type(true, cost);
+}
+
+Cost LeakageCost::evaluate_current_leakage() const {
+  switch (reduction_) {
+  case LeakageReduction::BINARY:
+    return has_leaked() ? 1 : 0;
+  case LeakageReduction::N_INSTRUCTIONS:
+    return num_leaky_instructions();
+  case LeakageReduction::N_EQUIVALENCE_CLASSES:
+    return sum_equivalence_classes();
+  case LeakageReduction::N_VALUE_RANGES:
+    return sum_value_ranges();
+  default:
+    assert(false);
+    return 0;
+  }
 }
 
 void LeakageCost::leakage_callback_wrapper(const StateCallbackData& data, void* arg) {

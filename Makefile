@@ -235,6 +235,7 @@ TOOL_NON_ARG_OBJ=\
 	tools/io/init.o \
 	tools/io/mem_set.o \
 	tools/io/reduction.o \
+	tools/io/leakage_reduction.o \
 	tools/io/postprocessing.o \
 	tools/io/solver.o \
 	tools/io/state_diff.o \

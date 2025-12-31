@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "src/cost/cost_function.h"
+#include "src/cost/leakage_reduction.h"
 #include "src/sandbox/state_callback.h"
 #include "src/ext/x64asm/include/x64asm.h"
 #include "src/validator/leakage_ranges.h"
@@ -32,6 +33,7 @@ public:
   LeakageCost() {
     set_run_test_sandbox(true);
     num_callbacks = 0;
+    set_reduction(LeakageReduction::BINARY);
   }
 
   virtual bool need_test_sandbox() {
@@ -53,11 +55,20 @@ public:
   /** Static callback function compatible with StateCallback */
   static void leakage_callback_wrapper(const StateCallbackData& data, void* arg);
 
+  /** Set reduction method */
+  LeakageCost& set_reduction(LeakageReduction r) {
+    reduction_ = r;
+    return *this;
+  }
+
 private:
   int num_callbacks;
 
   /** Instance method to handle leakage tracking */
   void leakage_callback(const StateCallbackData& data);
+
+  /** Evaluate leakage based on current leakage monitor state */
+  Cost evaluate_current_leakage() const;
 
   /** Count the number of lines, i.e., instructions, with detected leakage */
   int num_leaky_instructions() const;
@@ -83,6 +94,9 @@ private:
 
   /** Utility function */
   uint32_t popct(uint32_t val) const;
+
+  /** Method for reducing leakage to a single cost value over multiple test cases */
+  LeakageReduction reduction_;
 
   /** Leakage monitoring map: line number -> (equivalence class index -> value range mask)  */
   std::unordered_map<int, std::unordered_map<int, uint32_t>> leakage_monitor;
