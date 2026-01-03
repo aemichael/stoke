@@ -82,6 +82,8 @@ void Search::run(const Cfg& target, CostFunction& fxn, Init init, SearchState& s
     state.success = true;
     state.best_correct = state.current;
     state.best_correct_cost = 0;
+    // Set iterations to 1 to prevent infinite looping if initial rewrite has 0 cost but fails verification
+    num_iterations = 1;
     return;
   }
 

@@ -61,13 +61,14 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   if (leakage_ranges.find(opcode) == leakage_ranges.end()) {
     return;
   }
+  // cout << endl << "Calling back on " << opcode << endl;
   num_callbacks++;
 
   // Extract mapped operand values from callback state
   std::unordered_map<OperandID, uint64_t> operand_values;
   for (size_t i = 0; i < instruction.arity(); ++i) {
     const auto& op = instruction.get_operand<x64asm::Operand>(i);
-    OperandID id = getOperandId(op, i);
+    OperandID id = get_operand_id(instruction, i);
 
     // Not handled: memory operands, non-general-purpose registers, flags as implicit inputs
     if (id == OperandID::NotSupported) {
@@ -77,11 +78,24 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
     uint64_t value = 0;
     if (op.is_gp_register()) {
       auto& reg = reinterpret_cast<const x64asm::R&>(op);
-      value = data.state.gp[reg].get_fixed_quad(0);
+      switch (op.size()) {
+        case 8:
+          value = data.state.gp[reg].get_fixed_byte(0);
+          break;
+        case 16:
+          value = data.state.gp[reg].get_fixed_word(0);
+          break;
+        case 32:
+          value = data.state.gp[reg].get_fixed_double(0);
+          break;
+        default:
+          value = data.state.gp[reg].get_fixed_quad(0);
+      }
     } else if (op.is_immediate()) {
       value = reinterpret_cast<const x64asm::Imm&>(op);
     }
     operand_values[id] = value;
+    // cout << "Operand at " << i << ": " << instruction.type(i) << " -> " << id << ", " << value << endl;
   }
 
   // Record equivalence class and corresponding value ranges
@@ -89,10 +103,11 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   const int eq_class = eq_class_and_mask.first;
   if (eq_class >= 0) {
     // Initialize leakage_monitor entry if it doesn't exist
-    // if (leakage_monitor.find(data.line) == leakage_monitor.end()) {
-    //   leakage_monitor[data.line] = new std::unordered_map<int, uint32_t>();
-    // }
-    leakage_monitor[data.line][eq_class] = eq_class_and_mask.second;
+    if (leakage_monitor.find(data.line) == leakage_monitor.end() ||
+        leakage_monitor[data.line].find(eq_class) == leakage_monitor[data.line].end()) {
+      leakage_monitor[data.line][eq_class] = 0;
+    }
+    leakage_monitor[data.line][eq_class] |= eq_class_and_mask.second;
   }
 }
 
@@ -103,17 +118,21 @@ bool LeakageCost::has_leaked() const {
 int LeakageCost::num_leaky_instructions() const {
   int count = 0;
   for (const auto& kv : leakage_monitor) {
-    if (kv.second.size()) {
+    // cout << "Line " << kv.first << " has size " << kv.second.size() << endl;
+    if (kv.second.size() > 1) {
       ++count;
     }
   }
+  // cout << "Num leaky instructions: " << count << endl << endl;
   return count;
 }
 
 int LeakageCost::sum_equivalence_classes() const {
   int sum = 0;
   for (const auto& kv : leakage_monitor) {
-    sum += kv.second.size();
+    if (kv.second.size() > 1) {
+      sum += kv.second.size() - 1;
+    }
   }
   return sum;
 }
@@ -121,8 +140,10 @@ int LeakageCost::sum_equivalence_classes() const {
 int LeakageCost::sum_value_ranges() const {
   int sum = 0;
   for (const auto& kv : leakage_monitor) {
-    for (const auto& ec : kv.second) {
-      sum += popct(ec.second);
+    if (kv.second.size() > 1) {
+      for (const auto& ec : kv.second) {
+        sum += popct(ec.second);
+      }
     }
   }
   return sum;
@@ -140,7 +161,9 @@ std::pair<int,uint32_t> LeakageCost::get_equivalence_class_and_partition_mask(co
 
   // Iterate over equivalence classes until we find one that matches
   for (size_t i = 0; eq_class < 0 && i < eq_classes.size(); ++i) {
-    if (uint32_t mask = get_partition_index_mask(eq_classes[i], values)) {
+    uint32_t mask = get_partition_index_mask(eq_classes[i], values);
+    // cout << "Mask for eq_class " << i << ": " << mask << endl;
+    if (mask) {
       eq_class = i;
       value_ranges = mask;
     }
@@ -159,7 +182,8 @@ uint32_t LeakageCost::get_partition_index_mask(const EquivalenceClass& eq_class,
     bool all_ops_in_partition = true;
     for (const auto& opv : values) {
       auto it = partition_map.find(opv.first);
-      if (it != partition_map.end() && it->second.contains(opv.second)) {
+      if (it != partition_map.end() && !it->second.contains(opv.second)) {
+        // cout << "Op " << opv.first << ", " << opv.second << " not in partition" << endl;
         all_ops_in_partition = false;
         break;
       }

@@ -18,8 +18,8 @@ enum class OperandID {
     NotSupported
 };
   
-inline OperandID getOperandId(const x64asm::Operand& op, size_t index) {
-  switch (op.type()) {
+inline OperandID get_operand_id(const x64asm::Instruction& inst, size_t index) {
+  switch (inst.type(index)) {
     // General purpose registers
     case x64asm::Type::AL:
     case x64asm::Type::AX:
@@ -30,19 +30,37 @@ inline OperandID getOperandId(const x64asm::Operand& op, size_t index) {
       return OperandID::RDX;
     case x64asm::Type::CL:
       return OperandID::RCX;
+    // Unspecified registers
     case x64asm::Type::RH:
     case x64asm::Type::R_8:
     case x64asm::Type::R_16:
     case x64asm::Type::R_32:
     case x64asm::Type::R_64:
-      // We assume R1/R2/R3 id maps to overall operand index; observationally, this seems accurate
-      // for mapping from K-framework ids (see src/ext/x64asm/src/arity.table)
-      if (index == 0) {
-        return OperandID::R1;
-      } else if (index == 1) {
-        return OperandID::R2;
-      } else {
-        return OperandID::R3;
+      // Requires special handling: k-framework semantics "flip" the numbering order of register
+      // operands compared to stoke. I.e., R3 always precedes R2, which always precedes R1.
+      if (inst.arity() > 3) {
+        // No support for instructions with arity > 3
+        return OperandID::NotSupported;
+      }
+      switch(index) {
+        case 0:
+          switch(inst.arity()) {
+            case 1:
+              return OperandID::R1;
+            case 2:
+              return OperandID::R2;
+            default: // arity 3
+              return OperandID::R3;
+          }
+        case 1:
+          switch(inst.arity()) {
+            case 2:
+              return OperandID::R1;
+            default: // arity 3
+              return OperandID::R2;
+          }
+        default: // index 2
+          return OperandID::R1;
       }
     // Immediates
     case x64asm::Type::IMM_8:
@@ -74,6 +92,48 @@ struct hash<stoke::OperandID> {
     return std::hash<int32_t>()(static_cast<int32_t>(operandId));
   }
 };
+
+inline ostream& operator<<(ostream& os, const stoke::OperandID& opid) {
+  switch (opid)
+  {
+  case stoke::OperandID::R1:
+    os << "R1";
+    return os;
+  case stoke::OperandID::R2:
+    os << "R2";
+    return os;
+  case stoke::OperandID::R3:
+    os << "R3";
+    return os;
+  case stoke::OperandID::Imm8:
+    os << "Imm8";
+    return os;
+  case stoke::OperandID::Imm16:
+    os << "Imm16";
+    return os;
+  case stoke::OperandID::Imm32:
+    os << "Imm32";
+    return os;
+  case stoke::OperandID::Imm64:
+    os << "Imm64";
+    return os;
+  case stoke::OperandID::RAX:
+    os << "RAX";
+    return os;
+  case stoke::OperandID::RCX:
+    os << "RCX";
+    return os;
+  case stoke::OperandID::RDX:
+    os << "RDX";
+    return os;
+  case stoke::OperandID::NotSupported:
+    os << "NotSupported";
+    return os;
+  default:
+    os << "Unexpected OperandID";
+    return os;
+  }
+}
 }
 
 namespace stoke {

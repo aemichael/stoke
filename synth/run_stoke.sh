@@ -74,6 +74,7 @@ done
 OUTPUT_DIR="$DIR/$TAG_$TIME"
 mkdir -p $OUTPUT_DIR
 
+cp run_stoke.sh $OUTPUT_DIR
 cp $TARGET "$OUTPUT_DIR/target_$TARGET"
 cp $PREVIOUS "$OUTPUT_DIR/previous_$PREVIOUS"
 cp $SYNTH_CONF $OUTPUT_DIR

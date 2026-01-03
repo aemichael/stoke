@@ -1369,6 +1369,7 @@ SymBool ObligationChecker::build_leakage_partition(const Partition& partition, S
   for (const auto& range : partition.ranges) {
     SymBitVector low = SymBitVector::constant(width, std::get<0>(range));
     SymBitVector high = SymBitVector::constant(width, std::get<1>(range));
+    // cout << "Built leakage partition: " << low << " <= " << op_bv << " <= " << high << endl;
     range_constraints.push_back((op_bv >= low) & (op_bv <= high));
   }
 
@@ -1376,6 +1377,7 @@ SymBool ObligationChecker::build_leakage_partition(const Partition& partition, S
   SymBool partition_cond = range_constraints.size() == 1 ? range_constraints[0] :
     std::accumulate(range_constraints.begin(), range_constraints.end(), SymBool::constant(false),
       [](SymBool p, SymBool q){ return p|q; });
+  // cout << "Final partition condition: " << partition_cond << endl << endl;
   return partition_cond;
 }
 
@@ -1394,24 +1396,25 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   // Each top-level element represents the constraints for one equivalence class.
   vector<vector<SymBool>> constraints;
   auto opcode = instr.get_opcode();
-  cout << "Checking leakage for " << opcode << endl;
-
-  // 1a: Collect operand SymBitVector values and widths into a map
-  unordered_map<OperandID, pair<SymBitVector, uint16_t>> operands;
-  for (size_t i = 0; i < instr.arity(); ++i) {
-    const Operand& op = instr.get_operand<Operand>(0);
-    OperandID id = getOperandId(op, i);
-    if (id != OperandID::NotSupported) {
-      operands[id] = make_pair(state[op], op.size());
-    }
-  }
-
-  // 1b: Determine constraints from leakage ranges and operand values
   auto it = leakage_ranges.find(opcode);
   if (it != leakage_ranges.end()) {
+    cout << "Checking leakage for " << opcode << endl;
+
+    // 1a: Collect operand SymBitVector values and widths into a map
+    unordered_map<OperandID, pair<SymBitVector, uint16_t>> operands;
+    for (size_t i = 0; i < instr.arity(); ++i) {
+      OperandID id = get_operand_id(instr, i);
+      // cout << "Id for operand " << instr.type(i) << " at index " << i << ": " << id << endl;
+      if (id != OperandID::NotSupported) {
+        const Operand& op = instr.get_operand<Operand>(i);
+        operands[id] = make_pair(state[op], op.size());
+      }
+    }
+
+    // 1b: Determine constraints from leakage ranges and operand values
     // Accumulate one set of constraints per equivalence class
     for (const auto& eq_class : it->second) {
-      vector<SymBool> ec_constraints;
+      SymBool ec_constraint = SymBool::constant(false);
 
       // Iterate over all partition maps belonging to eq_class
       for (const auto& partition_map : eq_class.partitions) {
@@ -1421,14 +1424,16 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
         for (const auto& opv : partition_map) {
           OperandID id = opv.first;
           if (operands.find(id) != operands.end()) {
+            // cout << "Building partition condition for " << id << endl;
             partition_constraint = partition_constraint & build_leakage_partition(
               opv.second, operands[id].first, operands[id].second
             );
           }
         }
-        ec_constraints.push_back(partition_constraint);
+        ec_constraint = ec_constraint | partition_constraint;
       }
-      constraints.push_back(ec_constraints);
+      // cout << "Final equivalence class constraint: " << ec_constraint << endl << endl;
+      constraints.push_back({ec_constraint});
     }
   } // if (it != leakage_ranges.end())
   // else {
