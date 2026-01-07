@@ -1,9 +1,8 @@
 #!/bin/bash
 
 TIME=$(TZ='America/Los_Angeles' date +%F-%H:%M:%S-%Z)
-MO=$(TZ='America/Los_Angeles' date +%Y-%m)
 DIR="results"
-TAG=""
+TAG="untagged"
 SEP="-------------------###-------------------"
 
 TARGET=$1
@@ -14,16 +13,17 @@ TCS_CONF="config/testcase.conf"
 function usage
 {
     echo "Usage: ./run_stoke.sh [ -h | --help (displays this message) ]
-			   target <assembly file containing the target instruction(s) for equivalence>
-			   previous <assembly file containing an existing transform to optimize or repair> 
-			   [ -s | --synthesis-conf <configuration file for search and verification> ]
-			   [ -c | --testcase-conf <configuration file for testcase generation> ]
-			   [ -o | --output <outer directory for output files> ]
-			   [ -t | --tag <tag to prepend to timestamped directory name> ]"
+			   target (assembly file containing the target instruction(s) for equivalence)
+			   previous (assembly file containing an existing transform to optimize or repair)
+			   [ -s | --synthesis-conf <configuration file for search and verification (default: config/synthesize.conf)> ]
+			   [ -c | --testcase-conf <configuration file for testcase generation (default: config/testcase.conf)> ]
+			   [ -o | --output <outer directory for output files (default: results)> ]
+			   [ -t | --tag <tag to prepend to timestamped directory name (default: untagged)> ]
+			   [ -n | --no-timestamp (omit timestamp from output directory path) ]"
     exit 2
 }
 
-PARSED_ARGS=$(getopt -o "hs:c:o:t:" -l "help,synthesis-conf:,testcase-conf:,output:,tag:" -n run_stoke.sh -- "$@")
+PARSED_ARGS=$(getopt -o "hs:c:o:t:n" -l "help,synthesis-conf:,testcase-conf:,output:,tag:,no-timestamp" -n run_stoke.sh -- "$@")
 
 if [[ $? -ne 0 ]]; then
        echo "Error parsing args"
@@ -58,6 +58,11 @@ while true; do
 	    shift 2
 	    continue
 	    ;;
+	'-n' | '--no-timestamp')
+	    TIME=""
+	    shift 1
+	    continue
+	    ;;
 	'--')
 	    shift
 	    break
@@ -71,12 +76,12 @@ while true; do
 done
 
 # Set up output directory, copy important files
-OUTPUT_DIR="$DIR/$TAG_$TIME"
+OUTPUT_DIR="$DIR/$TAG/$TIME"
 mkdir -p $OUTPUT_DIR
 
 cp run_stoke.sh $OUTPUT_DIR
-cp $TARGET "$OUTPUT_DIR/target_$TARGET"
-cp $PREVIOUS "$OUTPUT_DIR/previous_$PREVIOUS"
+cp $TARGET "$OUTPUT_DIR/target.s"
+cp $PREVIOUS "$OUTPUT_DIR/previous.s"
 cp $SYNTH_CONF $OUTPUT_DIR
 cp $TCS_CONF $OUTPUT_DIR
 
@@ -87,10 +92,14 @@ TCS_FILE="$OUTPUT_DIR/tcs"
 
 echo "Generating testcases..."
 
-echo "stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF" > $LOG_FILE
+echo "/home/stoke/stoke/bin/stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF" > $LOG_FILE
 echo "" >> $LOG_FILE
 
-stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF &>> $LOG_FILE
+/home/stoke/stoke/bin/stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF &>> $LOG_FILE
+if [[ $? -ne 0 ]]; then
+	echo "Error in testcase generation. See $LOG_FILE for details"
+	exit 1
+fi
 
 # Run synthesis
 
@@ -102,9 +111,13 @@ echo "See $LOG_FILE for running output"
 echo "" >> $LOG_FILE
 echo "$SEP" >> $LOG_FILE
 echo "" >> $LOG_FILE
-echo "stoke_search --out $RESULT_FILE --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
+echo "/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
 echo "" >> $LOG_FILE
 
-stoke_search --out $RESULT_FILE --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
+/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
+if [[ $? -ne 0 ]]; then
+	echo "Error in search. See $LOG_FILE for details"
+	exit 1
+fi
 
 echo "Done"
