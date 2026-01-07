@@ -92,7 +92,7 @@ TCS_FILE="$OUTPUT_DIR/tcs"
 
 echo "Generating testcases..."
 
-echo "/home/stoke/stoke/bin/stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF" > $LOG_FILE
+echo "/home/stoke/stoke/bin/tcgen_leakage --target $TARGET --output $TCS_FILE --config $TCS_CONF" > $LOG_FILE
 echo "" >> $LOG_FILE
 
 /home/stoke/stoke/bin/stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF &>> $LOG_FILE
