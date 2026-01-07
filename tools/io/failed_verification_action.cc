@@ -26,7 +26,8 @@ namespace {
 
 array<pair<string, FailedVerificationAction>, 4> pts {{
     {"quit", FailedVerificationAction::QUIT},
-    {"add_counterexample", FailedVerificationAction::ADD_COUNTEREXAMPLE}
+    {"add_counterexample", FailedVerificationAction::ADD_COUNTEREXAMPLE},
+    {"add_all_counterexamples", FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES}
   }
 };
 

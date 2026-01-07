@@ -145,7 +145,7 @@ public:
     return have_leakage_ceg_;
   }
 
-  CpuState checker_get_leakage_ceg() {
+  std::vector<CpuState> checker_get_leakage_cegs() {
     return ceg_rl_;
   }
 
@@ -285,8 +285,8 @@ private:
   /** Do we have a counterexample? */
   bool have_ceg_;
 
-  /** Rewrite leakage counterexample */
-  CpuState ceg_rl_;
+  /** Rewrite leakage counterexample(s) */
+  std::vector<CpuState> ceg_rl_;
   /** Do we have a counterexample? */
   bool have_leakage_ceg_;
 

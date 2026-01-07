@@ -144,7 +144,9 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
 
         if (checker_has_leakage_ceg()) {
           assert(!no_lkg);
-          counterexamples_.push_back(checker_get_leakage_ceg());
+          for (auto it : checker_get_leakage_cegs()) {
+            counterexamples_.push_back(it);
+          }
         }
 
         if (bailout_ && !no_lkg && checker_has_leakage_ceg())
@@ -153,11 +155,11 @@ bool LeakageValidator::verify(const Cfg& init_target, const Cfg& init_rewrite) {
       if (no_lkg) {
         cout << "[lv] Passed leakage check" << endl;
       } else {
-        cout << "[lv] FAILED leakage check" << endl;
+        cout << "[lv] Failed leakage check" << endl;
       }
       ok &= no_lkg;
     } else {
-      cout << "[lv] FAILED correctness check" << endl;
+      cout << "[lv] Failed correctness check" << endl;
     }
 
     reset_mm();

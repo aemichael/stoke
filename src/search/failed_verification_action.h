@@ -19,7 +19,8 @@ namespace stoke {
 
 enum class FailedVerificationAction {
   QUIT = 0,
-  ADD_COUNTEREXAMPLE
+  ADD_COUNTEREXAMPLE,
+  ADD_ALL_COUNTEREXAMPLES
 };
 
 } // namespace stoke

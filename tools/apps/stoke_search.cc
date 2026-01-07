@@ -99,7 +99,7 @@ auto& timeout_seconds_arg =
 
 auto& failed_verification_action =
   ValueArg<FailedVerificationAction, FailedVerificationActionReader, FailedVerificationActionWriter>::create("failed_verification_action")
-  .usage("(quit|add_counterexample)")
+  .usage("(quit|add_counterexample|add_all_counterexamples)")
   .description("Action to take when the verification at the end fails")
   .default_val(FailedVerificationAction::ADD_COUNTEREXAMPLE);
 
@@ -446,8 +446,9 @@ int main(int argc, char** argv) {
   }
 
   if (strategy_arg.value() == "none" &&
-      failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE) {
-    Console::error() << "No verification is performed, thus no counterexample can be added (--failed_verification_action add_counterexample and --strategy none are not compatible)." << endl;
+      (failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE ||
+       failed_verification_action.value() == FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES)) {
+    Console::error() << "No verification is performed, thus no counterexample can be added (--failed_verification_action (add_counterexample|add_all_counterexamples) and --strategy none are not compatible)." << endl;
   }
 
   string final_msg;
@@ -543,11 +544,24 @@ int main(int argc, char** argv) {
       Console::error(1) << "Search terminated unsuccessfully; unable to discover a new rewrite!" << endl;
     }
 
-    if (!verified && !use_cached_result && verifier.counter_examples_available() && failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE) {
-      Console::msg() << "Restarting search using new testcase (counterexample from verifier):" << endl << endl;
-      Console::msg() << verifier.get_counter_examples()[0] << endl << endl;
-      training_sb.insert_input(verifier.get_counter_examples()[0]);
+    if (!verified && !use_cached_result && verifier.counter_examples_available()) {
+      if (failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE) {
+        Console::msg() << "Restarting search using new testcase (counterexample from verifier):" << endl << endl;
+        Console::msg() << verifier.get_counter_examples()[0] << endl << endl;
+        training_sb.insert_input(verifier.get_counter_examples()[0]);
+      } else if (failed_verification_action.value() == FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES) {
+        Console::msg() << "Restarting search using " << verifier.counter_examples_available() << " new testcases (counterexamples from verifier):" << endl << endl;
+        for (auto it : verifier.get_counter_examples()) {
+          Console::msg() << it << endl << endl;
+          training_sb.insert_input(it);
+        }
+      }
     } else {
+      if (!verified && !use_cached_result && !verifier.counter_examples_available() && 
+          (failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE ||
+           failed_verification_action.value() == FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES)) {
+        Console::msg() << "No counterexample available from verifier" << endl;
+      }
       Console::msg() << "Restarting search" << endl;
     }
   }
