@@ -468,7 +468,7 @@ int main(int argc, char** argv) {
     Console::msg() << "Running search (timeout is " << cur_timeout << " iterations";
     // timeout in seconds
     if (timeout_seconds_arg.value() != 0) {
-      auto time_remaining = duration_cast<duration<double>>(steady_clock::now() - start) + duration<double>(timeout_seconds_arg.value());
+      auto time_remaining = duration<double>(timeout_seconds_arg.value()) - duration_cast<duration<double>>(steady_clock::now() - start);
       if (time_remaining <= steady_clock::duration::zero()) {
         show_final_update(search.get_statistics(), state, total_restarts, total_iterations, start, search_elapsed, false, true);
         Console::error(1) << "Search terminated unsuccessfully; unable to discover a new rewrite!" << endl;
