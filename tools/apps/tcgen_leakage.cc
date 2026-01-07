@@ -127,6 +127,9 @@ bool check_testcase(CpuState cs, Sandbox& sb) {
 CpuState mutate_to_target(CpuState cs, size_t num_registers, size_t target_index,
                           Sandbox& sb, default_random_engine& gen) {
   size_t reg_choice = gen() % 16;
+  if (debug_arg.value()) {
+    cout << " * * Mutating to target " << target_index << ": " << mutation_targets[target_index] << endl;
+  }
 
   for (size_t i = 0; i < num_registers; i++) {
     CpuState candidate = cs;
@@ -267,6 +270,13 @@ int main(int argc, char** argv) {
     if (checker.checker_has_ceg()) {
       auto tc = checker.checker_get_target_ceg();
 
+      // Generate targeted mutations
+      cout << " * Generating targeted test cases (N = " << mutation_targets.size() << ")" << endl;
+      for (size_t i = 0; i < mutation_targets.size(); ++i) {
+        auto mutated = mutate_to_target(tc, 16, i, sb, gen);
+        outputs.push_back(mutated);
+      }
+
       if (!check_testcase(tc, sb)) {
         cerr << "Warning: skipping over invalid (original) testcase" << endl;
         cerr << tc << endl;
@@ -276,12 +286,6 @@ int main(int argc, char** argv) {
       outputs.push_back(tc);
       if (debug_arg.value()) {
         cerr << " * Found testcase" << endl;
-      }
-
-      // Generate targeted mutations
-      for (size_t i = 0; i < mutation_targets.size(); ++i) {
-        auto mutated = mutate_to_target(tc, 16, i, sb, gen);
-        outputs.push_back(mutated);
       }
 
       for (size_t i = 0; i < mutants_arg.value(); ++i) {

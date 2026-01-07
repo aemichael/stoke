@@ -90,12 +90,12 @@ LOG_FILE="$OUTPUT_DIR/run_stoke.log"
 # Generate testcases
 TCS_FILE="$OUTPUT_DIR/tcs"
 
-echo "Generating testcases..."
+echo "Generating testcases..." | tee $LOG_FILE
 
 echo "/home/stoke/stoke/bin/tcgen_leakage --target $TARGET --output $TCS_FILE --config $TCS_CONF" > $LOG_FILE
 echo "" >> $LOG_FILE
 
-/home/stoke/stoke/bin/stoke_tcgen --target $TARGET --output $TCS_FILE --config $TCS_CONF &>> $LOG_FILE
+/home/stoke/stoke/bin/tcgen_leakage --target $TARGET --output $TCS_FILE --config $TCS_CONF &>> $LOG_FILE
 if [[ $? -ne 0 ]]; then
 	echo "Error in testcase generation. See $LOG_FILE for details"
 	exit 1
@@ -104,17 +104,19 @@ fi
 # Run synthesis
 
 RESULT_FILE="$OUTPUT_DIR/synth_result.s"
+RESULT_DIR=$OUTPUT_DIR/results
+mkdir -p $RESULT_DIR
 
-echo "Running synthesis..."
+echo "Running synthesis..." | tee -a $LOG_FILE
 echo "See $LOG_FILE for running output"
 
 echo "" >> $LOG_FILE
 echo "$SEP" >> $LOG_FILE
 echo "" >> $LOG_FILE
-echo "/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
+echo "/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
 echo "" >> $LOG_FILE
 
-/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
+/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
 if [[ $? -ne 0 ]]; then
 	echo "Error in search. See $LOG_FILE for details"
 	exit 1
