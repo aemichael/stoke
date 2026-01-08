@@ -119,7 +119,13 @@ echo "" >> $LOG_FILE
 /home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
 if [[ $? -ne 0 ]]; then
 	echo "Error in search. See $LOG_FILE for details"
-	exit 1
+	if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
+		echo "Results found in $RESULT_DIR. Copying latest to $RESULT_FILE"
+		latest=$(ls $RESULT_DIR -1 | tail -1)
+		cp $RESULT_DIR/$latest $RESULT_FILE
+	else
+		exit 1
+	fi
 fi
 
 echo "Done"

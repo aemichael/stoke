@@ -10,6 +10,7 @@ PREV_DIR=$3
 SYNTH_CONF="config/synthesize.conf"
 TCS_CONF="config/testcase.conf"
 TS_FLAG=""
+SKIP_NO_PREV=0
 
 function usage
 {
@@ -22,11 +23,12 @@ function usage
 			   [ -c | --testcase-conf <configuration file for testcase generation (default: config/testcase.conf)> ]
 			   [ -o | --output <outer directory for output files (default: results)> ]
 			   [ -t | --tag <tag to prepend to timestamped directory name (default: untagged)> ]
-			   [ -n | --no-timestamp (omit timestamp from output directory path) ]"
+			   [ -n | --no-timestamp (omit timestamp from output directory path) ]
+			   [ -k | --skip-missing-previous (do not attempt to synthesize targets that lack a previous transform) ]"
     exit 2
 }
 
-PARSED_ARGS=$(getopt -o "hj:s:c:o:t:n" -l "help,jobs:,synthesis-conf:,testcase-conf:,output:,tag:,no-timestamp" -n run_all_matching.sh -- "$@")
+PARSED_ARGS=$(getopt -o "hj:s:c:o:t:nk" -l "help,jobs:,synthesis-conf:,testcase-conf:,output:,tag:,no-timestamp,skip-missing-previous" -n run_all_matching.sh -- "$@")
 
 if [[ $? -ne 0 ]]; then
        echo "Error parsing args"
@@ -68,6 +70,11 @@ while true; do
 	    ;;
 	'-n' | '--no-timestamp')
 	    TS_FLAG="-n"
+	    shift 1
+	    continue
+	    ;;
+	'-k' | '--skip-missing-previous')
+	    SKIP_NO_PREV=1
 	    shift 1
 	    continue
 	    ;;
@@ -140,9 +147,16 @@ do
     if [[ ! -f $target ]]; then
         echo "Target not found for $inst; skipping"
     else if [[ ! -f $previous ]]; then
-        echo "Previous transform not found for $inst; skippping"
+		if [[ $SKIP_NO_PREV -ne 0 ]]; then
+			echo "Previous transform not found for $inst; skipping (--skip-missing-previous passed)"
+		else
+			echo "Previous transform not found for $inst. Treating target as previous transform"
+			previous=$target
+			echo "Starting $inst job: ./run_stoke.sh $target $previous -s $SYNTH_CONF -c $TCS_CONF -o $DIR -t $TAG/$inst $TS_FLAG"
+			./run_stoke.sh $target $previous -s $SYNTH_CONF -c $TCS_CONF -o $DIR -t $TAG/$inst $TS_FLAG &
+		fi
     else
-        echo "Starting job for $inst"
+        echo "Starting $inst job: ./run_stoke.sh $target $previous -s $SYNTH_CONF -c $TCS_CONF -o $DIR -t $TAG/$inst $TS_FLAG"
         ./run_stoke.sh $target $previous -s $SYNTH_CONF -c $TCS_CONF -o $DIR -t $TAG/$inst $TS_FLAG &
     fi; fi
 done
