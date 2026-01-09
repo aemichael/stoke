@@ -107,25 +107,22 @@ RESULT_FILE="$OUTPUT_DIR/synth_result.s"
 RESULT_DIR=$OUTPUT_DIR/results
 mkdir -p $RESULT_DIR
 
-echo "Running synthesis..." | tee -a $LOG_FILE
-echo "See $LOG_FILE for running output"
+echo "Running synthesis. Logging output to $LOG_FILE" | tee -a $LOG_FILE
 
-echo "" >> $LOG_FILE
-echo "$SEP" >> $LOG_FILE
-echo "" >> $LOG_FILE
+echo -e "\n$SEP\n" >> $LOG_FILE
 echo "/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
 echo "" >> $LOG_FILE
 
 /home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
 if [[ $? -ne 0 ]]; then
-	echo "Error in search. See $LOG_FILE for details"
 	if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
-		echo "Results found in $RESULT_DIR. Copying latest to $RESULT_FILE"
+		echo "Search reported failure. Results found in $RESULT_DIR. Copying latest to $RESULT_FILE"
 		latest=$(ls $RESULT_DIR -1 | tail -1)
 		cp $RESULT_DIR/$latest $RESULT_FILE
 	else
+		echo "Error in search. See $LOG_FILE for details"
 		exit 1
 	fi
+else
+	echo "Search finished successfully with transform in $RESULT_FILE" 
 fi
-
-echo "Done"
