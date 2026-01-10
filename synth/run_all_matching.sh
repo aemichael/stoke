@@ -108,7 +108,7 @@ case $INST_REX in
 	INST_REX="ADD/||/SUB"
 	;;
 'bitwise')
-	INST_REX="AND/||/OR/||/XOR"
+	INST_REX="AND/||/OR.-R.*-R.*/||/XOR"
 	;;
 'shifts')
 	INST_REX="SHL/||/SHR/||/SAR"
@@ -118,6 +118,12 @@ case $INST_REX in
 	;;
 'shifts-cl')
 	INST_REX="SHL.*-CL/||/SHR.*-CL/||/SAR.*-CL"
+	;;
+'rotate')
+	INST_REX="RO"
+	;;
+'imul')
+	INST_REX="IMUL.*-R.*-R.*"
 	;;
 *)
 	;;
