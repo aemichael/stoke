@@ -81,8 +81,20 @@ public:
 
     if (lhs && rhs)
       return 1;
-    else
+    else {
+      std::stringstream e;
+      SymPrettyVisitor pv(e);
+      e << "In binop: ";
+      pv(b);
+      if (!lhs && !rhs)
+        e << " neither argument typechecked";
+      else if (!rhs)
+        e << " the right hand side (" << rhs << ") didn't typecheck";
+      else
+        e << " the left hand side (" << lhs << ") didn't typecheck";
+      set_error(e);
       return 0;
+    }
   }
 
   /** Visit a bit-vector EQ */
@@ -101,7 +113,7 @@ public:
         << " but RHS has width " << rhs;
       set_error(e);
       return 0;
-    } else if (!lhs) {
+    } else {
       std::stringstream e;
       SymPrettyVisitor pv(e);
       e << "In compare: ";
@@ -110,7 +122,6 @@ public:
       set_error(e);
       return 0;
     }
-    return 0;
   }
 
   /** Visit a bit-vector unary operator */
@@ -132,12 +143,12 @@ public:
       SymPrettyVisitor pv(e);
       e << "In concatenation: ";
       pv(bv);
-      if (!lhs)
-        e << " the left hand side didn't typecheck";
-      else if (!rhs)
-        e << " the right hand side didn't typecheck";
-      else
+      if (!lhs && !rhs)
         e << " neither argument typechecked";
+      else if (!rhs)
+        e << " the right hand side (" << rhs << ") didn't typecheck";
+      else
+        e << " the left hand side (" << lhs << ") didn't typecheck";
       set_error(e);
       return 0;
     }
