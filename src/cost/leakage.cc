@@ -78,7 +78,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
     uint64_t value = 0;
     if (op.is_gp_register()) {
       auto& reg = reinterpret_cast<const x64asm::R&>(op);
-      switch (op.size()) {
+      switch (x64asm::bit_width_of_type(instruction.type(i))) {
         case 8:
           value = data.state.gp[reg].get_fixed_byte(0);
           break;
@@ -88,8 +88,11 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
         case 32:
           value = data.state.gp[reg].get_fixed_double(0);
           break;
-        default:
+        case 64:
           value = data.state.gp[reg].get_fixed_quad(0);
+          break;
+        default:
+          assert(false);
       }
     } else if (op.is_immediate()) {
       value = reinterpret_cast<const x64asm::Imm&>(op);

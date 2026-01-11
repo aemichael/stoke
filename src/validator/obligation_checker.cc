@@ -1407,7 +1407,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
       // cout << "Id for operand " << instr.type(i) << " at index " << i << ": " << id << endl;
       if (id != OperandID::NotSupported) {
         const Operand& op = instr.get_operand<Operand>(i);
-        operands[id] = make_pair(state[op], op.size());
+        operands[id] = make_pair(state[op], x64asm::bit_width_of_type(instr.type(i)));
       }
     }
 
