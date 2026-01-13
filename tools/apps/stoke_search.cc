@@ -511,16 +511,17 @@ int main(int argc, char** argv) {
     const bool use_cached_result = cache_verification_arg && best_correct_verified.first;
     const auto verified = use_cached_result ? best_correct_verified.second
                           : verifier.verify(target, state.best_correct);
+
+    if (!use_cached_result && verifier.has_error()) {
+      Console::msg() << "The verifier encountered an error:" << endl;
+      Console::msg() << verifier.error() << endl;
+    }
+
     if (use_cached_result) {
       Console::msg() << "Using cached verification result for current best correct..." << endl;
     } else {
       best_correct_verified.first = true;
       best_correct_verified.second = verified;
-    }
-
-    if (verifier.has_error()) {
-      Console::msg() << "The verifier encountered an error:" << endl;
-      Console::msg() << verifier.error() << endl;
     }
 
     if (!state.success) {
