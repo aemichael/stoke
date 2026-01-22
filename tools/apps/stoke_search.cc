@@ -136,6 +136,7 @@ static Cost lowest_cost = 0;
 static Cost lowest_correct = 0;
 static Cost starting_cost = 0;
 static std::pair<bool,bool> best_correct_verified = std::pair<bool,bool>(false, false);
+static bool best_correct_has_error = false;
 
 void show_state(const SearchState& state, ostream& os) {
   ofilterstream<Column> ofs(os);
@@ -335,6 +336,7 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
     const auto verified = verifier.verify(target, res);
     best_correct_verified.first = true;
     best_correct_verified.second = verified;
+    best_correct_has_error = verifier.has_error();
 
     if (verifier.has_error()) {
       Console::msg() << "The verifier encountered an error: " << verifier.error() << endl << endl;
@@ -369,6 +371,7 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
     }
 
   } else {
+    best_correct_verified.first = false;
     cout << "No action on new best correct" << endl;
 
   }
@@ -522,6 +525,12 @@ int main(int argc, char** argv) {
     } else {
       best_correct_verified.first = true;
       best_correct_verified.second = verified;
+      best_correct_has_error = verifier.has_error();
+    }
+
+    if (best_correct_has_error) {
+      // Terminate early on error
+      total_iterations = timeout_iterations_arg.value();
     }
 
     if (!state.success) {

@@ -969,6 +969,17 @@ void ObligationChecker::build_circuit(const Cfg& cfg, Cfg::id_type bb, JumpType 
     line_no++;
     auto instr = cfg.get_code()[i];
 
+    cout << endl << "[build_circuit] Instr at index " << i << ": " << instr << endl;
+    if (!instr.is_label_defn()) {
+      for (size_t j = 0; j < instr.arity(); j++) {
+        auto op = instr.get_operand<Operand>(j);
+        cout << " Operand " << j << ": " << op << ":" << op.type() << " = " << state[op] << endl;
+        if (op.type() != instr.type(j)) {
+          cout << "    TYPE MISMATCH: Expected " << instr.type(j) << ", got " << op.type() << endl;
+        }
+      }
+    }
+
     if (instr.is_jcc()) {
       // get the name of the condition
       string name = opcode_write_att(instr.get_opcode());
