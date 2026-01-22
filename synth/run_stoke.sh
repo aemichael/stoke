@@ -75,6 +75,21 @@ while true; do
     shift
 done
 
+# Sanity checks
+if [[ ! -f $TARGET ]]; then
+	echo "File $TARGET not found"
+	usage
+elif [[ ! -f $PREVIOUS ]]; then
+	echo "File $PREVIOUS not found"
+	usage
+elif [[ ! -f $SYNTH_CONF ]]; then
+	echo "Synthesis config file $SYNTH_CONF not found"
+	usage
+elif [[ ! -f $TCS_CONF ]]; then
+	echo "Testcase config file $TCS_CONF not found"
+	usage
+fi
+
 # Set up output directory, copy important files
 OUTPUT_DIR="$DIR/$TAG/$TIME"
 mkdir -p $OUTPUT_DIR
@@ -84,6 +99,7 @@ cp $TARGET "$OUTPUT_DIR/target.s"
 cp $PREVIOUS "$OUTPUT_DIR/previous.s"
 cp $SYNTH_CONF $OUTPUT_DIR
 cp $TCS_CONF $OUTPUT_DIR
+cp /home/stoke/stoke/src/validator/leakage_ranges.h $OUTPUT_DIR
 
 LOG_FILE="$OUTPUT_DIR/run_stoke.log"
 
