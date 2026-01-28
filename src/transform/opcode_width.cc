@@ -28,6 +28,11 @@ TransformInfo OpcodeWidthTransform::operator()(Cfg& cfg) {
 
   // Grab the index of a random instruction
   ti.undo_index[0] = (gen_() % (cfg.get_code().size() - 1)) + 1;
+  Cfg::id_type bb = cfg.get_entry();
+  size_t block_idx = 0;
+  if (!get_indices(cfg, bb, block_idx, ti.undo_index[0])) {
+    return ti;
+  }
 
   ti.undo_instr = cfg.get_code()[ti.undo_index[0]];
   if (is_control_other_than_call(ti.undo_instr.get_opcode()))
@@ -41,6 +46,21 @@ TransformInfo OpcodeWidthTransform::operator()(Cfg& cfg) {
     return ti;
   }
   instr.set_opcode(opc);
+
+  const auto& rs = cfg.def_ins({bb, block_idx});
+  for (size_t i = 0, ie = instr.arity(); i < ie; ++i) {
+    Operand o = instr.get_operand<R64>(i);
+    if (instr.maybe_read(i)) {
+      if (!pools_.get_read_op(instr.get_opcode(), i, rs, o)) {
+        return ti;
+      }
+    } else {
+      if (!pools_.get_write_op(instr.get_opcode(), i, rs, o)) {
+        return ti;
+      }
+    }
+    instr.set_operand(i, o);
+  }
 
   // Check that the instruction is valid
   if (!instr.check()) {
