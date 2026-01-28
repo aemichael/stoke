@@ -40,12 +40,22 @@ TransformInfo OpcodeWidthTransform::operator()(Cfg& cfg) {
 
   // Try generating a new instruction
   auto instr = ti.undo_instr;
+  cout << "[transform] Applying opcode width transform to instr: " << instr << endl;
 
   auto opc = instr.get_opcode();
   if (!pools_.get_equivalent_raw_memonic(opc)) {
     return ti;
   }
   instr.set_opcode(opc);
+  // if (!instr.is_label_defn()) {
+  //   for (size_t j = 0; j < instr.arity(); j++) {
+  //     auto op = instr.get_operand<Operand>(j);
+  //     cout << " Operand " << j << ": " << op << ":" << op.type() << endl;
+  //     if (op.type() != instr.type(j)) {
+  //       cout << "    TYPE MISMATCH: Expected " << instr.type(j) << ", got " << op.type() << endl;
+  //     }
+  //   }
+  // }
 
   const auto& rs = cfg.def_ins({bb, block_idx});
   for (size_t i = 0, ie = instr.arity(); i < ie; ++i) {
@@ -64,8 +74,10 @@ TransformInfo OpcodeWidthTransform::operator()(Cfg& cfg) {
 
   // Check that the instruction is valid
   if (!instr.check()) {
+    // cout << "Invalid!" << endl << endl;
     return ti;
   }
+  // cout << "Valid! " << instr << endl;
 
   // Success: Any failure beyond here will require undoing the move
   cfg.get_function().replace(ti.undo_index[0], instr, false, true);
@@ -74,6 +86,17 @@ TransformInfo OpcodeWidthTransform::operator()(Cfg& cfg) {
     undo(cfg, ti);
     return ti;
   }
+
+  // if (!instr.is_label_defn()) {
+  //   for (size_t j = 0; j < instr.arity(); j++) {
+  //     auto op = instr.get_operand<Operand>(j);
+  //     cout << " Operand " << j << ": " << op << ":" << op.type() << endl;
+  //     if (op.type() != instr.type(j)) {
+  //       cout << "    TYPE MISMATCH: Expected " << instr.type(j) << ", got " << op.type() << endl;
+  //     }
+  //   }
+  // }
+  // cout << endl;
 
   assert(cfg.invariant_no_undef_reads());
   assert(cfg.get_function().check_invariants());
