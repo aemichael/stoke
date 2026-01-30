@@ -40,7 +40,7 @@ TransformInfo OpcodeWidthTransform::operator()(Cfg& cfg) {
 
   // Try generating a new instruction
   auto instr = ti.undo_instr;
-  cout << "[transform] Applying opcode width transform to instr: " << instr << endl;
+  // cout << "[transform] Applying opcode width transform to instr: " << instr << endl;
 
   auto opc = instr.get_opcode();
   if (!pools_.get_equivalent_raw_memonic(opc)) {
