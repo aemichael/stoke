@@ -265,6 +265,42 @@ TEST_F(LeakageCostTest, AndqPartialTransformLeaks) {
   EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leakage
 }
 
+TEST_F(LeakageCostTest, SublTransformZeroLeakyInstructions) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movq %rcx, %r11" << std::endl;
+  ss << "movl %ecx, %ecx" << std::endl;
+  ss << "subq $0x80000000, %rcx" << std::endl;
+  ss << "subq $0x80000000, %rcx" << std::endl;
+  ss << "subq %rcx, %rax" << std::endl;
+  ss << "movl %eax, %eax" << std::endl;
+  ss << "movq %r11, %rcx" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  fxn_.set_reduction(LeakageReduction::N_INSTRUCTIONS);
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 for non-leaky transform
+}
+
 TEST_F(LeakageCostTest, SingleSubqOneLeakyInstruction) {
 
   // Add testcases with different values to trigger leakage patterns
@@ -326,6 +362,42 @@ TEST_F(LeakageCostTest, SubqAndqTwoLeakyInstructions) {
   EXPECT_EQ(2ul, result.second);  // Cost should be 2 for leaky subq, andq
 }
 
+TEST_F(LeakageCostTest, SublTransformZeroEquivalenceClasses) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movq %rcx, %r11" << std::endl;
+  ss << "movl %ecx, %ecx" << std::endl;
+  ss << "subq $0x80000000, %rcx" << std::endl;
+  ss << "subq $0x80000000, %rcx" << std::endl;
+  ss << "subq %rcx, %rax" << std::endl;
+  ss << "movl %eax, %eax" << std::endl;
+  ss << "movq %r11, %rcx" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  fxn_.set_reduction(LeakageReduction::N_EQUIVALENCE_CLASSES);
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 for non-leaky transform
+}
+
 TEST_F(LeakageCostTest, SingleSubqOneEquivalenceClass) {
 
   // Add testcases with different values to trigger leakage patterns
@@ -354,6 +426,42 @@ TEST_F(LeakageCostTest, SingleSubqOneEquivalenceClass) {
   // Expect the cost to be 1 (indicating leakage was detected)
   EXPECT_TRUE(result.first);  // Should be successful
   EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leaky subq
+}
+
+TEST_F(LeakageCostTest, SublTransformZeroValueRanges) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movq %rcx, %r11" << std::endl;
+  ss << "movl %ecx, %ecx" << std::endl;
+  ss << "subq $0x80000000, %rcx" << std::endl;
+  ss << "subq $0x80000000, %rcx" << std::endl;
+  ss << "subq %rcx, %rax" << std::endl;
+  ss << "movl %eax, %eax" << std::endl;
+  ss << "movq %r11, %rcx" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  fxn_.set_reduction(LeakageReduction::N_VALUE_RANGES);
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 for non-leaky transform
 }
 
 TEST_F(LeakageCostTest, SingleSubqTwoValueRanges) {
