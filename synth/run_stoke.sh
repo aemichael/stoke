@@ -121,15 +121,16 @@ fi
 
 RESULT_FILE="$OUTPUT_DIR/synth_result.s"
 RESULT_DIR=$OUTPUT_DIR/results
+COST_FILE="$OUTPUT_DIR/costs.csv"
 mkdir -p $RESULT_DIR
 
 echo "Running synthesis. Logging output to $LOG_FILE" | tee -a $LOG_FILE
 
 echo -e "\n$SEP\n" >> $LOG_FILE
-echo "/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
+echo "/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --cost_output $COST_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF" >> $LOG_FILE
 echo "" >> $LOG_FILE
 
-/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
+/home/stoke/stoke/bin/stoke_search --out $RESULT_FILE --cost_output $COST_FILE --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS --testcases $TCS_FILE --config $SYNTH_CONF &>> $LOG_FILE
 if [[ $? -ne 0 ]]; then
 	if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
 		echo "Search reported failure, but results found in $RESULT_DIR. Check results manually, as some may be correct."

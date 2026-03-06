@@ -52,6 +52,13 @@ cpputil::ValueArg<std::string, cpputil::LineReader<>>& correctness_arg =
       .description("Expression to check if code is correct")
       .default_val("correctness == 0");
 
+cpputil::ValueArg<std::string, cpputil::LineReader<>>& cost_logger_arg =
+      cpputil::ValueArg<std::string, cpputil::LineReader<>>::create("cost_logging")
+      .usage("<string>")
+      .description(R"(Comma-separated list of cost functions whose values should be logged for verified
+rewrites. E.g., "latency,size,2 * binsize".)")
+      .default_val("");
+
 } //namespace stoke
 
 #endif

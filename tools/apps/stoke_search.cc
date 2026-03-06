@@ -35,6 +35,7 @@
 #include "tools/args/search.inc"
 #include "tools/args/target.inc"
 #include "tools/gadgets/cost_function.h"
+#include "tools/gadgets/cost_logger.h"
 #include "tools/gadgets/correctness_cost.h"
 #include "tools/gadgets/functions.h"
 #include "tools/gadgets/sandbox.h"
@@ -75,6 +76,11 @@ auto& results_arg = ValueArg<string>::create("results")
 auto& machine_output_arg = ValueArg<string>::create("machine_output")
                            .usage("<path/to/file.s>")
                            .description("Machine-readable output (result and statistics)");
+
+auto& cost_output_arg = ValueArg<string>::create("cost_output")
+                    .usage("<path/to/file.csv>")
+                    .description("Path to file to write cost results for target and verified rewrites")
+                    .default_val("costs.csv");
 
 auto& stats = Heading::create("Statistics Options:");
 auto& stat_int =
@@ -315,9 +321,10 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
     Console::msg() << "Verifying improved rewrite..." << endl;
 
     auto state = data.state;
-    auto data = (pair<VerifierGadget&, TargetGadget&>*)arg;
-    auto verifier = data->first;
-    auto target = data->second;
+    auto data = (tuple<VerifierGadget&, TargetGadget&, CostLoggerGadget&>*)arg;
+    auto verifier = std::get<0>(*data);
+    auto target = std::get<1>(*data);
+    auto cost_log_fxn = std::get<2>(*data);
 
     // perform the postprocessing
     Cfg res(state.current);
@@ -360,6 +367,9 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
       outfile.open(name);
       outfile << res.get_function();
       outfile.close();
+
+      // log costs for verified Cfg
+      cost_log_fxn(name, target);
     } else {
       Console::msg() << "Verification failed."  << endl << endl;
       if (verifier.counter_examples_available()) {
@@ -424,13 +434,16 @@ int main(int argc, char** argv) {
   CorrectnessCostGadget holdout_fxn(target, &test_sb);
   VerifierGadget verifier(test_sb, holdout_fxn);
 
+  CostLoggerGadget cost_log_fxn(cost_output_arg.value(), target, &training_sb, &perf_sb);
+  cost_log_fxn("target", target);
+
   ScbArg scb_arg {&Console::msg(), nullptr};
   search.set_statistics_callback(scb, &scb_arg)
   .set_statistics_interval(stat_int);
   if (!no_progress_update_arg.value()) {
     search.set_progress_callback(pcb, &Console::msg());
   }
-  auto nbcc_data = pair<VerifierGadget&, TargetGadget&>(verifier, target);
+  auto nbcc_data = tuple<VerifierGadget&, TargetGadget&, CostLoggerGadget&>(verifier, target, cost_log_fxn);
   search.set_new_best_correct_callback(new_best_correct_callback, &nbcc_data);
 
   size_t total_iterations = 0;
@@ -542,6 +555,7 @@ int main(int argc, char** argv) {
         final_msg = "Search terminated successfully (but no verification was performed)!";
       } else {
         final_msg = "Search terminated successfully with a verified rewrite!";
+        cost_log_fxn("output", state.best_correct);
       }
       break;
     }
@@ -593,6 +607,7 @@ int main(int argc, char** argv) {
 
   ofstream ofs(out.value());
   ofs << state.best_correct.get_function();
+  cost_log_fxn("output (post-processed)", state.best_correct);
 
   return 0;
 }
