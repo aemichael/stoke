@@ -33,6 +33,7 @@
 #include "src/search/postprocessing.h"
 
 #include "tools/args/search.inc"
+#include "tools/args/search_state.inc"
 #include "tools/args/target.inc"
 #include "tools/gadgets/cost_function.h"
 #include "tools/gadgets/cost_logger.h"
@@ -436,6 +437,7 @@ int main(int argc, char** argv) {
 
   CostLoggerGadget cost_log_fxn(cost_output_arg.value(), target, &training_sb, &perf_sb);
   cost_log_fxn("target", target);
+  cost_log_fxn("previous", CfgGadget(previous_arg.value(), aux_fxns, init_arg == Init::ZERO));
 
   ScbArg scb_arg {&Console::msg(), nullptr};
   search.set_statistics_callback(scb, &scb_arg)
