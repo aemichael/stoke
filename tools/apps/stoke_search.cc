@@ -322,10 +322,10 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
     Console::msg() << "Verifying improved rewrite..." << endl;
 
     auto state = data.state;
-    auto data = (tuple<VerifierGadget&, TargetGadget&, CostLoggerGadget&>*)arg;
-    auto verifier = std::get<0>(*data);
-    auto target = std::get<1>(*data);
-    auto cost_log_fxn = std::get<2>(*data);
+    auto arg_data = (tuple<VerifierGadget&, TargetGadget&, CostLoggerGadget&>*)arg;
+    auto verifier = std::get<0>(*arg_data);
+    auto target = std::get<1>(*arg_data);
+    auto cost_log_fxn = std::get<2>(*arg_data);
 
     // perform the postprocessing
     Cfg res(state.current);
@@ -435,7 +435,7 @@ int main(int argc, char** argv) {
   CorrectnessCostGadget holdout_fxn(target, &test_sb);
   VerifierGadget verifier(test_sb, holdout_fxn);
 
-  CostLoggerGadget cost_log_fxn(cost_output_arg.value(), target, &training_sb, &perf_sb);
+  CostLoggerGadget cost_log_fxn(cost_output_arg.value(), target, &test_sb, &perf_sb);
   cost_log_fxn("target", target);
   cost_log_fxn("previous", CfgGadget(previous_arg.value(), aux_fxns, init_arg == Init::ZERO));
 
@@ -525,7 +525,7 @@ int main(int argc, char** argv) {
       Console::msg() << "Search interrupted!" << endl;
       exit(1);
     }
-    
+
     const bool use_cached_result = cache_verification_arg && best_correct_verified.first;
     const auto verified = use_cached_result ? best_correct_verified.second
                           : verifier.verify(target, state.best_correct);
@@ -583,7 +583,7 @@ int main(int argc, char** argv) {
         }
       }
     } else {
-      if (!verified && !use_cached_result && !verifier.counter_examples_available() && 
+      if (!verified && !use_cached_result && !verifier.counter_examples_available() &&
           (failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE ||
            failed_verification_action.value() == FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES)) {
         Console::msg() << "No counterexample available from verifier" << endl;
