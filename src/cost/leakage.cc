@@ -68,7 +68,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   std::unordered_map<OperandID, uint64_t> operand_values;
   for (size_t i = 0; i < instruction.arity(); ++i) {
     const auto& op = instruction.get_operand<x64asm::Operand>(i);
-    OperandID id = get_operand_id(instruction, i);
+    OperandID id = get_operand_id(instruction, i, false);
 
     // Not handled: memory operands, non-general-purpose registers, flags as implicit inputs
     if (id == OperandID::NotSupported) {

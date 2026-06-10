@@ -1414,7 +1414,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
     // 1a: Collect operand SymBitVector values and widths into a map
     unordered_map<OperandID, pair<SymBitVector, uint16_t>> operands;
     for (size_t i = 0; i < instr.arity(); ++i) {
-      OperandID id = get_operand_id(instr, i);
+      OperandID id = get_operand_id(instr, i, false);
       // cout << "Id for operand " << instr.type(i) << " at index " << i << ": " << id << endl;
       if (id != OperandID::NotSupported) {
         const Operand& op = instr.get_operand<Operand>(i);
@@ -1542,7 +1542,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
     if (is_leaky)
       break;
   }
-  
+
   return !is_leaky;
 }
 
@@ -1551,7 +1551,7 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
   ceg_rl_.clear();
   have_leakage_ceg_ = false;
   SymState state("INIT");
-  
+
   // We don't consider memory instructions for leakage, but we do have to model it
   // for accurate data flow
   // Using super simple flat memory model for now
@@ -1570,7 +1570,7 @@ bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& 
 
     size_t start_index = cfg.get_index(std::pair<Cfg::id_type, size_t>(bb, 0));
     size_t end_index = start_index + cfg.num_instrs(bb);
-    
+
     // Iterate over each instruction in the basic block
     for (size_t j = start_index; j < end_index; ++j) {
       // Check input leakage first, then step the state forward
