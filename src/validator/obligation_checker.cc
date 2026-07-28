@@ -1513,7 +1513,9 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
   // Step 2.5: If we need to deal with output constraints, handle that here
 
   // Step 3: Query the solver for leakage
-  bool has_sat = false;
+  // If there are no constraints, then all values are in the same eq class
+  // (vacuously safe)
+  bool has_sat = (constraints.size() == 0);
 
   // Check all sets of leakage constraints
   for (size_t i = 0; i < constraints.size(); ++i) {
@@ -1543,7 +1545,8 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
       break;
   }
 
-  return !is_leaky;
+  // has_sat is always true, otherwise the partition doesn't cover the input space
+  return !is_leaky && has_sat;
 }
 
 bool ObligationChecker::check_no_leakage_on_path(const Cfg& cfg, const CfgPath& P) {
