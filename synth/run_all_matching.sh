@@ -11,6 +11,7 @@ SYNTH_CONF="config/synth_permissive.conf"
 TCS_CONF="config/testcase.conf"
 TS_FLAG=""
 SKIP_NO_PREV=1
+EXTRA_SEARCH_ARGS=""
 
 function usage
 {
@@ -23,6 +24,8 @@ function usage
                [ -j | --jobs <num>        ]  Max parallel jobs (default: $JOBS)
                [ -o | --out <dir>         ]  Directory for results and logs (default: $TOP_DIR)
                [ -t | --tag <tag>         ]  Tag to include in output path (optional)
+               [ --search-args <args>     ]  Extra arguments to pass to STOKE search. Be careful not to duplicate
+                                             args in the config file.
                [ --no-timestamp           ]  Exclude timestamp from results path
                [ --allow-missing-previous ]  Use with --previous to run jobs for instructions without a provided
                                              previous transform. Default behavior is to skip instructions without
@@ -30,7 +33,7 @@ function usage
     exit 2
 }
 
-PARSED_ARGS=$(getopt -o "hp:s:c:j:o:t:" -l "help,previous:,synth-conf:,tcs-conf:,jobs:,out:,tag:,no-timestamp,allow-missing-previous" -n $NAME -- "$@")
+PARSED_ARGS=$(getopt -o "hp:s:c:j:o:t:" -l "help,previous:,synth-conf:,tcs-conf:,jobs:,out:,tag:,search-args:,no-timestamp,allow-missing-previous" -n $NAME -- "$@")
 
 if [[ $? -ne 0 ]]; then
        echo "Error parsing args"
@@ -75,6 +78,11 @@ while true; do
         shift 2
         continue
         ;;
+    '--search-args')
+        EXTRA_SEARCH_ARGS="--search-args $2"
+        shift 2
+        continue
+        ;;
     '--no-timestamp')
         TS_FLAG="--no-timestamp"
         shift 1
@@ -101,26 +109,26 @@ INST_REGEX=$1
 TARGETS=$2
 
 if [[ -z "$INST_REGEX" ]]; then
-	echo "Error: Missing required argument INST_REGEX"
-	usage
+    echo "Error: Missing required argument INST_REGEX"
+    usage
 elif [[ -z "$TARGETS" ]]; then
-	echo "Error: Missing required argument TARGETS"
-	usage
+    echo "Error: Missing required argument TARGETS"
+    usage
 fi
 
 # Sanity checks
 if [[ ! -d $TARGETS ]]; then
-	echo "Directory $TARGETS not found"
-	usage
+    echo "Directory $TARGETS not found"
+    usage
 elif [[ ! -z $PREV_DIR && ! -d $PREV_DIR ]]; then
-	echo "Directory $PREV_DIR not found"
-	usage
+    echo "Directory $PREV_DIR not found"
+    usage
 elif [[ ! -f $SYNTH_CONF ]]; then
-	echo "File $SYNTH_CONF not found"
-	usage
+    echo "File $SYNTH_CONF not found"
+    usage
 elif [[ ! -f $TCS_CONF ]]; then
-	echo "File $TCS_CONF not found"
-	usage
+    echo "File $TCS_CONF not found"
+    usage
 fi
 
 # Parse instruction regular expression
@@ -179,9 +187,8 @@ do
     # Wait for current jobs if at max
     while (( $(jobs -r | wc -l) >= JOBS )); do
         wait -n
-        if [[ $? -ne 0 && $? -ne 5 ]]; then
-            # run_stoke.sh exits with 5 on failure, other nonzero code on actual error
-            ERR=1
+        if [[ $? -ne 0 ]]; then
+            ERR=$?
         fi
     done
 
@@ -209,20 +216,22 @@ do
         fi
     fi
 
-    echo "[$NAME] Starting $inst job: ./run_stoke.sh $target $prev_arg -s $SYNTH_CONF -c $TCS_CONF -o $TOP_DIR -t $TAG/$inst $TS_FLAG"
-    ./run_stoke.sh $target $prev_arg -s $SYNTH_CONF -c $TCS_CONF -o $TOP_DIR -t $TAG/$inst $TS_FLAG
+    echo "[$NAME] Starting $inst job: ./run_stoke.sh $target $prev_arg \
+        -s $SYNTH_CONF -c $TCS_CONF $EXTRA_SEARCH_ARGS -o $TOP_DIR -t $TAG/$inst $TS_FLAG"
+    ./run_stoke.sh $target $prev_arg -s $SYNTH_CONF -c $TCS_CONF $EXTRA_SEARCH_ARGS \
+        -o $TOP_DIR -t $TAG/$inst $TS_FLAG &
 done
 
 echo "[$NAME] Waiting for jobs to finish..."
 while (( $(jobs -r | wc -l) > 0 )); do
     wait -n
     if [[ $? -ne 0 ]]; then
-        ERR=1
+        ERR=$?
     fi
 done
 
 if [[ $ERR -ne 0 ]]; then
     echo "[$NAME] Error occurred during jobs. Check logs in $TOP_DIR"
-    exit 1
+    exit $ERR
 fi
 echo "[$NAME] Done"
