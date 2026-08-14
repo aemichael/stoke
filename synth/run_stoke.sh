@@ -167,7 +167,7 @@ LAST_LINE=$(tail -n 1 $LOG_FILE)
 DURATION=$(grep "Total search time" $LOG_FILE |  awk ""' {print substr($4, 1, index($4, "s") - 1)}')
 echo $DURATION > $OUTPUT_DIR/seconds.txt
 
-if [ "$LAST_LINE" == "Search terminated unsuccessfully; unable to discover a new rewrite!" ]; then
+if [ "$LAST_LINE" == "FATAL ERROR: Search terminated unsuccessfully; unable to discover a new rewrite!" ]; then
     if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
         echo "[$NAME - $TARGET_SHORT] WARNING: Search reported failure, but results found in $RESULT_DIR. Using latest verified result"
         cp $(ls $RESULT_DIR | tail -1) $RESULT_FILE
