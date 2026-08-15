@@ -117,10 +117,16 @@ mkdir -p $OUTPUT_DIR
 
 cp $NAME $OUTPUT_DIR
 cp $TARGET "$OUTPUT_DIR/target.s"
-cp $PREVIOUS "$OUTPUT_DIR/previous.s"
 cp $SYNTH_CONF $OUTPUT_DIR
 cp $TCS_CONF $OUTPUT_DIR
 cp $STOKE_ROOT/src/validator/leakage_ranges.h $OUTPUT_DIR
+
+PREVIOUS_ARG="--previous $PREVIOUS"
+if [[ -z $PREVIOUS ]]; then
+    PREVIOUS_ARG=""
+else
+    cp $PREVIOUS "$OUTPUT_DIR/previous.s"
+fi
 
 LOG_FILE="$OUTPUT_DIR/run_stoke.log"
 TARGET_SHORT=$(basename $TARGET)
@@ -150,14 +156,14 @@ echo "[$NAME - $TARGET_SHORT] Running synthesis. Logging output to $LOG_FILE" | 
 
 echo -e "\n$SEP\n" >> $LOG_FILE
 echo ">> $STOKE_ROOT/bin/stoke_search --out $RESULT_FILE --cost_output $COST_FILE \
-  --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS \
+  --results $RESULT_DIR --target $TARGET --init previous $PREVIOUS_ARG \
   --testcases $TCS_FILE --config $SYNTH_CONF $EXTRA_SEARCH_ARGS" >> $LOG_FILE
 echo "" >> $LOG_FILE
 
 SECONDS=0
 
 $STOKE_ROOT/bin/stoke_search --out $RESULT_FILE --cost_output $COST_FILE \
-    --results $RESULT_DIR --target $TARGET --init previous --previous $PREVIOUS \
+    --results $RESULT_DIR --target $TARGET --init previous $PREVIOUS_ARG \
     --testcases $TCS_FILE --config $SYNTH_CONF $EXTRA_SEARCH_ARGS &>> $LOG_FILE
 
 EXIT_CODE=$?
@@ -170,7 +176,7 @@ echo $DURATION > $OUTPUT_DIR/seconds.txt
 if [ "$LAST_LINE" == "FATAL ERROR: Search terminated unsuccessfully; unable to discover a new rewrite!" ]; then
     if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
         echo "[$NAME - $TARGET_SHORT] WARNING: Search reported failure, but results found in $RESULT_DIR. Using latest verified result"
-        cp $(ls $RESULT_DIR | tail -1) $RESULT_FILE
+        cp $(realpath $(ls $RESULT_DIR | tail -1)) $RESULT_FILE
     else
         echo "[$NAME - $TARGET_SHORT] FAILURE: Search unsuccessful (target: $TARGET, previous: $PREVIOUS)"
     fi
