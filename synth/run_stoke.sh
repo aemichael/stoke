@@ -176,7 +176,7 @@ echo $DURATION > $OUTPUT_DIR/seconds.txt
 if [ "$LAST_LINE" == "FATAL ERROR: Search terminated unsuccessfully; unable to discover a new rewrite!" ]; then
     if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
         echo "[$NAME - $TARGET_SHORT] WARNING: Search reported failure, but results found in $RESULT_DIR. Using latest verified result"
-        cp $(realpath $(ls $RESULT_DIR | tail -1)) $RESULT_FILE
+        cp $RESULT_DIR/$(ls $RESULT_DIR | tail -1) $RESULT_FILE
     else
         echo "[$NAME - $TARGET_SHORT] FAILURE: Search unsuccessful (target: $TARGET, previous: $PREVIOUS)"
     fi
