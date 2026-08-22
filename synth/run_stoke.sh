@@ -9,7 +9,7 @@ STOKE_ROOT=$(realpath ..)
 NAME=run_stoke.sh
 
 PREVIOUS=""
-SYNTH_CONF="config/synth_permissive.conf"
+SYNTH_CONF="config/synth_permissive_short.conf"
 TCS_CONF="config/testcase.conf"
 EXTRA_SEARCH_ARGS=""
 

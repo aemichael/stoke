@@ -7,7 +7,7 @@ TAG=""
 JOBS=4
 
 PREV_DIR=""
-SYNTH_CONF="config/synth_permissive.conf"
+SYNTH_CONF="config/synth_permissive_short.conf"
 TCS_CONF="config/testcase.conf"
 TS_FLAG=""
 SKIP_NO_PREV=1
