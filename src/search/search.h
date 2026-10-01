@@ -119,8 +119,8 @@ private:
 
   /** Statistics so far. */
   std::vector<Statistics> move_statistics;
-  size_t num_iterations;
-  std::chrono::duration<double> elapsed;
+  size_t num_iterations = 0;
+  std::chrono::duration<double> elapsed = std::chrono::duration<double>::zero();
 
   /** Configures a search state. */
   void configure(const Cfg& target, CostFunction& fxn, SearchState& state, std::vector<stoke::TUnit>& aux_fxn) const;

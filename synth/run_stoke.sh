@@ -17,7 +17,7 @@ function usage
 {
     echo "Usage: ./$NAME [ -h | --help (displays this message) ]
                TARGET                        Assembly file with the target instruction(s)
-               [ -p | --previous <file>   ]  Assembly file with initial transform 
+               [ -p | --previous <file>   ]  Assembly file with initial transform
                [ -s | --synth-conf <file> ]  Config file for search (default: $SYNTH_CONF)
                [ -c | --tcs-conf <file>   ]  Config file for testcase generation (default: $TCS_CONF)
                [ -o | --out <dir>         ]  Output directory for results (default: $OUT_TOP)
@@ -174,9 +174,9 @@ DURATION=$(grep "Total search time" $LOG_FILE |  awk ""' {print substr($4, 1, in
 echo $DURATION > $OUTPUT_DIR/seconds.txt
 
 if [ "$LAST_LINE" == "FATAL ERROR: Search terminated unsuccessfully; unable to discover a new rewrite!" ]; then
-    if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then 
+    if [[ -d $RESULT_DIR && $(ls $RESULT_DIR | wc -l) -ne 0 ]]; then
         echo "[$NAME - $TARGET_SHORT] WARNING: Search reported failure, but results found in $RESULT_DIR. Using latest verified result"
-        cp $RESULT_DIR/$(ls $RESULT_DIR | tail -1) $RESULT_FILE
+        cp $RESULT_DIR/$(ls -v $RESULT_DIR | tail -1) $RESULT_FILE
     else
         echo "[$NAME - $TARGET_SHORT] FAILURE: Search unsuccessful (target: $TARGET, previous: $PREVIOUS)"
     fi

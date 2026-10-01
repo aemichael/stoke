@@ -144,6 +144,7 @@ static Cost lowest_correct = 0;
 static Cost starting_cost = 0;
 static std::pair<bool,bool> best_correct_verified = std::pair<bool,bool>(false, false);
 static bool best_correct_has_error = false;
+static vector<CpuState> best_correct_cex;
 
 void show_state(const SearchState& state, ostream& os) {
   ofilterstream<Column> ofs(os);
@@ -188,6 +189,9 @@ struct ScbArg {
 };
 
 void show_statistics(const StatisticsCallbackData& data, ostream& os) {
+  if (data.iterations == 0) {
+    return;
+  }
   os << "Iterations:                    " << data.iterations << endl;
   os << "Elapsed Time:                  " << data.elapsed.count() << "s" << endl;
   os << "Iterations/s:                  " << (data.iterations / data.elapsed.count()) << endl;
@@ -323,9 +327,9 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
 
     auto state = data.state;
     auto arg_data = (tuple<VerifierGadget&, TargetGadget&, CostLoggerGadget&>*)arg;
-    auto verifier = std::get<0>(*arg_data);
-    auto target = std::get<1>(*arg_data);
-    auto cost_log_fxn = std::get<2>(*arg_data);
+    auto& verifier = std::get<0>(*arg_data);
+    auto& target = std::get<1>(*arg_data);
+    auto& cost_log_fxn = std::get<2>(*arg_data);
 
     // perform the postprocessing
     Cfg res(state.current);
@@ -345,6 +349,10 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
     best_correct_verified.first = true;
     best_correct_verified.second = verified;
     best_correct_has_error = verifier.has_error();
+    best_correct_cex.clear();
+    if (!verified && verifier.counter_examples_available()) {
+      best_correct_cex = verifier.get_counter_examples();
+    }
 
     if (verifier.has_error()) {
       Console::msg() << "The verifier encountered an error: " << verifier.error() << endl << endl;
@@ -370,7 +378,7 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
       outfile.close();
 
       // log costs for verified Cfg
-      cost_log_fxn(name, target);
+      cost_log_fxn(name, res);
     } else {
       Console::msg() << "Verification failed."  << endl << endl;
       if (verifier.counter_examples_available()) {
@@ -512,6 +520,11 @@ int main(int argc, char** argv) {
       lowest_correct = 0;
     }
 
+    // Throw away verification results from previous rounds since they refer to a different best correct
+    best_correct_verified = std::pair<bool,bool>(false, false);
+    best_correct_has_error = false;
+    best_correct_cex.clear();
+
     const auto start_search = steady_clock::now();
     search.run(target, fxn, init_arg, state, aux_fxns);
     search_elapsed += duration_cast<duration<double>>(steady_clock::now() - start_search);
@@ -526,7 +539,7 @@ int main(int argc, char** argv) {
       exit(1);
     }
 
-    const bool use_cached_result = cache_verification_arg && best_correct_verified.first;
+    const bool use_cached_result = cache_verification_arg && best_correct_verified.first && best_correct_verified.second;
     const auto verified = use_cached_result ? best_correct_verified.second
                           : verifier.verify(target, state.best_correct);
 
@@ -541,11 +554,10 @@ int main(int argc, char** argv) {
       best_correct_verified.first = true;
       best_correct_verified.second = verified;
       best_correct_has_error = verifier.has_error();
-    }
-
-    if (best_correct_has_error) {
-      // Terminate early on error
-      total_iterations = timeout_iterations_arg.value();
+      best_correct_cex.clear();
+      if (!verified && verifier.counter_examples_available()) {
+        best_correct_cex = verifier.get_counter_examples();
+      }
     }
 
     if (!state.success) {
@@ -565,25 +577,26 @@ int main(int argc, char** argv) {
     sep(Console::msg());
 
 
-    if (timeout_iterations_arg.value() && total_iterations >= timeout_iterations_arg.value()) {
+    // Terminate early on verifier error
+    if (best_correct_has_error ||
+        (timeout_iterations_arg.value() && total_iterations >= timeout_iterations_arg.value())) {
       show_final_update(search.get_statistics(), state, total_restarts, total_iterations, start, search_elapsed, verified, true);
       Console::error(1) << "Search terminated unsuccessfully; unable to discover a new rewrite!" << endl;
     }
 
-    if (!verified && !use_cached_result && verifier.counter_examples_available()) {
+    if (!verified && !best_correct_cex.empty()) {
       if (failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE) {
         Console::msg() << "Restarting search using new testcase (counterexample from verifier):" << endl << endl;
-        Console::msg() << verifier.get_counter_examples()[0] << endl << endl;
-        training_sb.insert_input(verifier.get_counter_examples()[0]);
+        Console::msg() << best_correct_cex[0] << endl << endl;
+        training_sb.insert_input(best_correct_cex[0]);
       } else if (failed_verification_action.value() == FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES) {
-        Console::msg() << "Restarting search using " << verifier.counter_examples_available() << " new testcases (counterexamples from verifier):" << endl << endl;
-        for (auto it : verifier.get_counter_examples()) {
-          Console::msg() << it << endl << endl;
+        Console::msg() << "Restarting search using " << best_correct_cex.size() << " new testcases (counterexamples from verifier):" << endl << endl;
+        for (auto& it : best_correct_cex) {
           training_sb.insert_input(it);
         }
       }
     } else {
-      if (!verified && !use_cached_result && !verifier.counter_examples_available() &&
+      if (!verified && !best_correct_cex.empty() &&
           (failed_verification_action.value() == FailedVerificationAction::ADD_COUNTEREXAMPLE ||
            failed_verification_action.value() == FailedVerificationAction::ADD_ALL_COUNTEREXAMPLES)) {
         Console::msg() << "No counterexample available from verifier" << endl;

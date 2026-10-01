@@ -45,6 +45,7 @@ Search::Search(Transform* transform) : transform_(transform) {
   set_beta(1.0);
   set_progress_callback(nullptr, nullptr);
   set_statistics_callback(nullptr, nullptr);
+  set_new_best_correct_callback(nullptr, nullptr);
   set_statistics_interval(100000);
 
   static bool once = false;
@@ -141,7 +142,9 @@ void Search::run(const Cfg& target, CostFunction& fxn, Init init, SearchState& s
       state.best_correct = state.current;
       state.best_correct_cost = new_cost;
 
-      new_best_correct_cb_({state}, new_best_correct_cb_arg_);
+      if (new_best_correct_cb_ != nullptr) {
+        new_best_correct_cb_({state}, new_best_correct_cb_arg_);
+      }
     }
 
     if ((progress_cb_ != nullptr) && (new_best_yet || new_best_correct_yet)) {
