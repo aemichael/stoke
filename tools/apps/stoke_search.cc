@@ -343,6 +343,7 @@ void new_best_correct_callback(const NewBestCorrectCallbackData& data, void* arg
     } else {
       // Do nothing.
     }
+    res.recompute();
 
     // verify the new best correct rewrite
     const auto verified = verifier.verify(target, res);
