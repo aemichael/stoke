@@ -35,6 +35,7 @@ public:
 
     /** Read from memory and check if zero. */
     auto state = variable_.is_rewrite ? rewrite : target;
+    assert(state.memory && "pointer-null invariant needs a memory model");
     auto mem_value = state.memory->read(var_value, size_*8, 0);
     auto result = mem_value.first == SymBitVector::constant(size_*8, 0);
 

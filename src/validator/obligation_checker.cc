@@ -1104,7 +1104,9 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
 
   // Get a list of all aliasing cases.
   auto memory_list =  enumerate_aliasing(target, rewrite, P, Q, assume, prove);
-  bool flat_model = alias_strategy_ == AliasStrategy::FLAT;
+  // only model the heap when some instruction touches it
+  bool flat_model = alias_strategy_ == AliasStrategy::FLAT &&
+                    (!enumerate_accesses(target).empty() || !enumerate_accesses(rewrite).empty());
   bool arm_model = alias_strategy_ == AliasStrategy::ARM;
 
   OBLIG_DEBUG(cout << memory_list.size() << " Aliasing cases.  Yay." << endl;);
@@ -1297,7 +1299,7 @@ bool ObligationChecker::check(const Cfg& target, const Cfg& rewrite, Cfg::id_typ
         ok &= build_testcase_flat_memory(ceg_tf_, target_arm->get_variable(), other_map);
         ok &= build_testcase_flat_memory(ceg_rf_, rewrite_arm->get_variable(), other_map);
 
-      } else {
+      } else if (state_t.memory) {
         auto tcell = dynamic_cast<CellMemory*>(state_t.memory);
         auto rcell = dynamic_cast<CellMemory*>(state_r.memory);
         ok &= build_testcase_cell_memory(ceg_t_, tcell, rcell, target, rewrite, true);
