@@ -491,7 +491,7 @@ TEST_F(LeakageCostTest, SingleSubqTwoValueRanges) {
 
   // Expect the cost to be 1 (indicating leakage was detected)
   EXPECT_TRUE(result.first);  // Should be successful
-  EXPECT_EQ(2ul, result.second);  // Cost should be 1 for leaky subq
+  EXPECT_EQ(2ul, result.second);  // Cost should be 2
 }
 
 TEST_F(LeakageCostTest, SingleAddqThreeValueRanges) {
@@ -521,7 +521,66 @@ TEST_F(LeakageCostTest, SingleAddqThreeValueRanges) {
 
   // Expect the cost to be 1 (indicating leakage was detected)
   EXPECT_TRUE(result.first);  // Should be successful
-  EXPECT_EQ(3ul, result.second);  // Cost should be 1 for leaky subq
+  EXPECT_EQ(3ul, result.second);  // Cost should be 3
+}
+
+TEST_F(LeakageCostTest, LeaLeakageDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "leaw (%esi, %edi, 2), %ax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leaky leaw
+}
+
+TEST_F(LeakageCostTest, SafeLeaLeakageNotDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_testcases_for_zero(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $0, %esi" << std::endl;
+  ss << "leaw (%esi, %edi, 1), %ax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 (always adding 0)
 }
 
 } //namespace

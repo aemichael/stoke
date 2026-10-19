@@ -1420,7 +1420,42 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
       // cout << "Id for operand " << instr.type(i) << " at index " << i << ": " << id << endl;
       if (id != OperandID::NotSupported) {
         const Operand& op = instr.get_operand<Operand>(i);
-        operands[id] = make_pair(state[op], x64asm::bit_width_of_type(instr.type(i)));
+        if (op.is_typical_memory()) {
+            if (!instr.is_lea()) {
+                // Only supporting LEA for now
+                continue;
+            }
+            const auto& m = instr.get_operand<x64asm::Mem>(i);
+            // Record scale, offset, base
+            switch (m.get_scale()) {
+                case x64asm::Scale::TIMES_1:
+                    operands[OperandID::MScale] = make_pair(SymBitVector::constant(8, 1), 8);
+                    break;
+                case x64asm::Scale::TIMES_2:
+                    operands[OperandID::MScale] = make_pair(SymBitVector::constant(8, 2), 8);
+                    break;
+                case x64asm::Scale::TIMES_4:
+                    operands[OperandID::MScale] = make_pair(SymBitVector::constant(8, 4), 8);
+                    break;
+                case x64asm::Scale::TIMES_8:
+                    operands[OperandID::MScale] = make_pair(SymBitVector::constant(8, 8), 8);
+            };
+
+            if (m.contains_base()) {
+                operands[OperandID::MBase] = make_pair(
+                    state[m.get_base()],
+                    x64asm::bit_width_of_type(instr.type(i))
+                );
+            }
+            if (m.contains_index()) {
+                operands[OperandID::MIndex] = make_pair(
+                    state[m.get_index()],
+                    x64asm::bit_width_of_type(instr.type(i))
+                );
+            }
+        } else {
+            operands[id] = make_pair(state[op], x64asm::bit_width_of_type(instr.type(i)));
+        }
       }
     }
 

@@ -76,7 +76,77 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
     }
 
     uint64_t value = 0;
-    if (op.is_gp_register()) {
+
+    // Memory operands get special handling, as leakage may depend on individual components
+    // (base, scale, index, etc)
+    if (op.is_typical_memory()) {
+      // Only supports LEA for now
+      if (!instruction.is_lea()) {
+        continue;
+      }
+      const auto& m = instruction.get_operand<x64asm::Mem>(i);
+      value = data.state.get_addr(m);
+
+      // Record scale, offset, base
+      switch (m.get_scale()) {
+        case x64asm::Scale::TIMES_1:
+          operand_values[OperandID::MScale] = 1;
+          break;
+        case x64asm::Scale::TIMES_2:
+          operand_values[OperandID::MScale] = 2;
+          break;
+        case x64asm::Scale::TIMES_4:
+          operand_values[OperandID::MScale] = 4;
+          break;
+        case x64asm::Scale::TIMES_8:
+          operand_values[OperandID::MScale] = 8;
+      };
+
+      uint64_t base_value = 0;
+      if (m.contains_base()) {
+        x64asm::R64 b = m.get_base();
+        switch (x64asm::bit_width_of_type(instruction.type(i))) {
+          case 8:
+            base_value = data.state.gp[b].get_fixed_byte(0);
+            break;
+          case 16:
+            base_value = data.state.gp[b].get_fixed_word(0);
+            break;
+          case 32:
+            base_value = data.state.gp[b].get_fixed_double(0);
+            break;
+          case 64:
+            base_value = data.state.gp[b].get_fixed_quad(0);
+            break;
+          default:
+            assert(false);
+        }
+      }
+      operand_values[OperandID::MBase] = base_value;
+
+      uint64_t index_value = 0;
+      if (m.contains_index()) {
+        x64asm::R64 idx = m.get_index();
+        switch (x64asm::bit_width_of_type(instruction.type(i))) {
+          case 8:
+            index_value = data.state.gp[idx].get_fixed_byte(0);
+            break;
+          case 16:
+            index_value = data.state.gp[idx].get_fixed_word(0);
+            break;
+          case 32:
+            index_value = data.state.gp[idx].get_fixed_double(0);
+            break;
+          case 64:
+            index_value = data.state.gp[idx].get_fixed_quad(0);
+            break;
+          default:
+            assert(false);
+        }
+      }
+      operand_values[OperandID::MIndex] = index_value;
+
+    } else if (op.is_gp_register()) {
       auto& reg = reinterpret_cast<const x64asm::R&>(op);
       switch (x64asm::bit_width_of_type(instruction.type(i))) {
         case 8:

@@ -701,6 +701,48 @@ TEST_P(LeakageValidatorTest, ShllByClLeaky) {
   EXPECT_FALSE(validator->has_error()) << validator->error();
 }
 
+TEST_P(LeakageValidatorTest, LeaVariableBaseLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "leaw (%esi, %edi, 2), %ax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "leaw (%esi, %edi, 2), %ax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
+TEST_P(LeakageValidatorTest, LeaZeroBaseOneIndexNonLeaky) {
+
+  auto live_outs = omit_caller_saved();
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+//   sst << "movl $0, %esi" << std::endl;
+  sst << "leaq (%rsi), %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, live_outs, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+//   ssr << "movl $0, %esi" << std::endl;
+  ssr << "leaq (%rsi), %rax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+}
+
 INSTANTIATE_TEST_CASE_P(AllSolversAliasing, LeakageValidatorTest,
                         ::testing::Combine(
                           ::testing::Values(ObligationChecker::AliasStrategy::FLAT, ObligationChecker::AliasStrategy::ARM),
