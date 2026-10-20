@@ -13,3 +13,5 @@ leakage_test_logs/*
 *tcs/
 *.log
 *.out
+
+**/__pycache__
