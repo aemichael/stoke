@@ -2111,15 +2111,15 @@ vector<Opcode> instr_cat_base_ = {
 // , LAR_R64_R32 // LAR r64, r32
 // , LDDQU_XMM_M128 // LDDQU xmm, m128
 // , LDMXCSR_M32 // LDMXCSR m32
-// , LEA_R16_M16 // LEA r16, m16
-// , LEA_R16_M32 // LEA r16, m32
-// , LEA_R16_M64 // LEA r16, m64
-// , LEA_R32_M16 // LEA r32, m16
-// , LEA_R32_M32 // LEA r32, m32
-// , LEA_R32_M64 // LEA r32, m64
-// , LEA_R64_M16 // LEA r64, m16
-// , LEA_R64_M32 // LEA r64, m32
-// , LEA_R64_M64 // LEA r64, m64
+, LEA_R16_M16 // LEA r16, m16
+, LEA_R16_M32 // LEA r16, m32
+, LEA_R16_M64 // LEA r16, m64
+, LEA_R32_M16 // LEA r32, m16
+, LEA_R32_M32 // LEA r32, m32
+, LEA_R32_M64 // LEA r32, m64
+, LEA_R64_M16 // LEA r64, m16
+, LEA_R64_M32 // LEA r64, m32
+, LEA_R64_M64 // LEA r64, m64
 // , LEAVE // LEAVE
 // , LEAVE_PREF66 // LEAVE p66
 // , LFENCE // LFENCE

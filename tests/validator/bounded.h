@@ -1950,6 +1950,29 @@ TEST_P(BoundedValidatorBaseTest, NoSpuriousCeg) {
 
 }
 
+TEST_P(BoundedValidatorBaseTest, AddlLeaEquivalent) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "addl %esi, %edi" << std::endl;
+  sst << "movq %rdi, %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "leal (%rsi,%rdi,1), %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
 INSTANTIATE_TEST_CASE_P(AllSolversAliasing, BoundedValidatorBaseTest,
                         ::testing::Combine(
                           ::testing::Values(ObligationChecker::AliasStrategy::FLAT, ObligationChecker::AliasStrategy::ARM),

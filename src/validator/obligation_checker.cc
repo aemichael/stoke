@@ -1426,7 +1426,11 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
                 continue;
             }
             const auto& m = instr.get_operand<x64asm::Mem>(i);
-            // Record scale, offset, base
+            // Record displacement, scale, offset, base
+            uint64_t disp_value = (uint64_t)m.get_disp();
+            // cout << "m.disp = " << m.get_disp() << " -> " << disp_value << endl;
+            operands[OperandID::MDisp] = make_pair(SymBitVector::constant(32, disp_value), 32);
+            
             switch (m.get_scale()) {
                 case x64asm::Scale::TIMES_1:
                     operands[OperandID::MScale] = make_pair(SymBitVector::constant(8, 1), 8);
@@ -1441,18 +1445,20 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
                     operands[OperandID::MScale] = make_pair(SymBitVector::constant(8, 8), 8);
             };
 
+            SymBitVector base_value = SymBitVector::constant(64, 0);
             if (m.contains_base()) {
-                operands[OperandID::MBase] = make_pair(
-                    state[m.get_base()],
-                    x64asm::bit_width_of_type(instr.type(i))
-                );
+                base_value = state[m.get_base()];
             }
+            operands[OperandID::MBase] = make_pair(base_value, 64);
+            // cout << "m.base = " << base_value << endl;
+
+            SymBitVector index_value = SymBitVector::constant(64, 0);
             if (m.contains_index()) {
-                operands[OperandID::MIndex] = make_pair(
-                    state[m.get_index()],
-                    x64asm::bit_width_of_type(instr.type(i))
-                );
+                index_value = state[m.get_index()];
             }
+            operands[OperandID::MIndex] = make_pair(index_value, 64);
+            // cout << "m.index = " << index_value << endl;
+
         } else {
             operands[id] = make_pair(state[op], x64asm::bit_width_of_type(instr.type(i)));
         }

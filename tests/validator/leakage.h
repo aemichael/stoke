@@ -183,6 +183,7 @@ TEST_P(LeakageValidatorTest, SimpleSublLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, SublConstNotLeaky) {
@@ -203,6 +204,7 @@ TEST_P(LeakageValidatorTest, SublConstNotLeaky) {
 
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, SublConstZeroNotLeaky) {
@@ -223,6 +225,7 @@ TEST_P(LeakageValidatorTest, SublConstZeroNotLeaky) {
   
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, SublConstRegNotLeaky) {
@@ -245,6 +248,7 @@ TEST_P(LeakageValidatorTest, SublConstRegNotLeaky) {
 
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, SublTransformNotLeaky) {
@@ -278,6 +282,7 @@ TEST_P(LeakageValidatorTest, SublTransformNotLeaky) {
   }
 
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, SimpleAddlLeaky) {
@@ -298,6 +303,7 @@ TEST_P(LeakageValidatorTest, SimpleAddlLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddlDstOperandLeaky) {
@@ -320,6 +326,7 @@ TEST_P(LeakageValidatorTest, AddlDstOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddlSrcOperandLeaky) {
@@ -342,6 +349,7 @@ TEST_P(LeakageValidatorTest, AddlSrcOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddlConstOpcodeLeaky) {
@@ -362,6 +370,7 @@ TEST_P(LeakageValidatorTest, AddlConstOpcodeLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddlConstsNotLeaky) {
@@ -384,6 +393,7 @@ TEST_P(LeakageValidatorTest, AddlConstsNotLeaky) {
 
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddlTransformNotLeaky) {
@@ -413,6 +423,7 @@ TEST_P(LeakageValidatorTest, AddlTransformNotLeaky) {
 
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddqDstOperandLeaky) {
@@ -435,6 +446,7 @@ TEST_P(LeakageValidatorTest, AddqDstOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddqSrcOperandLeaky) {
@@ -457,6 +469,7 @@ TEST_P(LeakageValidatorTest, AddqSrcOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddbDstOperandLeaky) {
@@ -479,6 +492,7 @@ TEST_P(LeakageValidatorTest, AddbDstOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddbSrcOperandLeaky) {
@@ -501,6 +515,7 @@ TEST_P(LeakageValidatorTest, AddbSrcOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddwDstOperandLeaky) {
@@ -523,6 +538,30 @@ TEST_P(LeakageValidatorTest, AddwDstOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, AddlLeaEquivalentButLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "addl %esi, %edi" << std::endl;
+  sst << "movq %rdi, %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "leal (%rsi,%rdi,1), %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AddwSrcOperandLeaky) {
@@ -545,6 +584,7 @@ TEST_P(LeakageValidatorTest, AddwSrcOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, SimpleNeglLeaky) {
@@ -565,28 +605,31 @@ TEST_P(LeakageValidatorTest, SimpleNeglLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AndlSrcOperandLeaky) {
 
-  auto live_outs = omit_caller_saved();
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rcx;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
 
   std::stringstream sst;
   sst << ".foo:" << std::endl;
-  sst << "movl $0xFF, %eax" << std::endl;
+  sst << "movl $1, %eax" << std::endl;
   sst << "andl %ecx, %eax" << std::endl;
   sst << "retq" << std::endl;
-  auto target = make_cfg(sst, live_outs, live_outs);
+  auto target = make_cfg(sst, def_ins, live_outs);
 
   std::stringstream ssr;
   ssr << ".foo:" << std::endl;
-  ssr << "movl $0xFF, %eax" << std::endl;
+  ssr << "movl $1, %eax" << std::endl;
   ssr << "andl %ecx, %eax" << std::endl;
   ssr << "retq" << std::endl;
-  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AndlDstOperandLeaky) {
@@ -609,6 +652,7 @@ TEST_P(LeakageValidatorTest, AndlDstOperandLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, AndlTransformNotLeaky) {
@@ -637,6 +681,7 @@ TEST_P(LeakageValidatorTest, AndlTransformNotLeaky) {
 
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, ShllBy1Leaky) {
@@ -657,6 +702,7 @@ TEST_P(LeakageValidatorTest, ShllBy1Leaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, ShllByImmLeaky) {
@@ -677,6 +723,7 @@ TEST_P(LeakageValidatorTest, ShllByImmLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 TEST_P(LeakageValidatorTest, ShllByClLeaky) {
@@ -699,48 +746,125 @@ TEST_P(LeakageValidatorTest, ShllByClLeaky) {
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
-TEST_P(LeakageValidatorTest, LeaVariableBaseLeaky) {
+TEST_P(LeakageValidatorTest, LeaVariableBaseIndexLeaky) {
 
-  auto live_outs = omit_caller_saved();
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
 
   std::stringstream sst;
   sst << ".foo:" << std::endl;
-  sst << "leaw (%esi, %edi, 2), %ax" << std::endl;
+  sst << "leal (%esi, %edi, 2), %eax" << std::endl;
   sst << "retq" << std::endl;
-  auto target = make_cfg(sst, live_outs, live_outs);
+  auto target = make_cfg(sst, def_ins, live_outs);
 
   std::stringstream ssr;
   ssr << ".foo:" << std::endl;
-  ssr << "leaw (%esi, %edi, 2), %ax" << std::endl;
+  ssr << "leal (%esi, %edi, 2), %eax" << std::endl;
   ssr << "retq" << std::endl;
-  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
 
   EXPECT_FALSE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
-TEST_P(LeakageValidatorTest, LeaZeroBaseOneIndexNonLeaky) {
+TEST_P(LeakageValidatorTest, LeaZeroBaseZeroDispNonLeaky) {
 
-  auto live_outs = omit_caller_saved();
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
 
   std::stringstream sst;
   sst << ".foo:" << std::endl;
-//   sst << "movl $0, %esi" << std::endl;
-  sst << "leaq (%rsi), %rax" << std::endl;
+  sst << "movl $0, %esi" << std::endl;
+  sst << "leaq (%rsi, %rdi), %rax" << std::endl;
   sst << "retq" << std::endl;
-  auto target = make_cfg(sst, live_outs, live_outs);
+  auto target = make_cfg(sst, def_ins, live_outs);
 
   std::stringstream ssr;
   ssr << ".foo:" << std::endl;
-//   ssr << "movl $0, %esi" << std::endl;
-  ssr << "leaq (%rsi), %rax" << std::endl;
+  ssr << "movl $0, %esi" << std::endl;
+  ssr << "leaq (%rsi, %rdi), %rax" << std::endl;
   ssr << "retq" << std::endl;
-  auto rewrite = make_cfg(ssr, live_outs, live_outs);
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
 
   EXPECT_TRUE(validator->verify(target, rewrite));
   EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, LeaConstantBaseZeroIndexNonLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty();
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %esi" << std::endl;
+  sst << "leaq 4(%rsi), %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %esi" << std::endl;
+  ssr << "leaq 4(%rsi), %rax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, LeaNonZeroDispIndexNonLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %esi" << std::endl;
+  sst << "leaq -4(%rsi, %rdi), %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %esi" << std::endl;
+  ssr << "leaq -4(%rsi, %rdi), %rax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, LeaConstBaseVarIndexLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %esi" << std::endl;
+  sst << "leaq (%rsi, %rdi, 8), %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %esi" << std::endl;
+  ssr << "leaq (%rsi, %rdi, 8), %rax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
 INSTANTIATE_TEST_CASE_P(AllSolversAliasing, LeakageValidatorTest,

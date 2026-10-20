@@ -87,7 +87,9 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
       const auto& m = instruction.get_operand<x64asm::Mem>(i);
       value = data.state.get_addr(m);
 
-      // Record scale, offset, base
+      // Record displacement, scale, offset, base
+    //   cout << "MDisp: " << (uint64_t)m.get_disp() << endl;
+      operand_values[OperandID::MDisp] = (uint64_t)m.get_disp();
       switch (m.get_scale()) {
         case x64asm::Scale::TIMES_1:
           operand_values[OperandID::MScale] = 1;
@@ -101,6 +103,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
         case x64asm::Scale::TIMES_8:
           operand_values[OperandID::MScale] = 8;
       };
+    //   cout << "MScale: " << operand_values[OperandID::MScale] << endl;
 
       uint64_t base_value = 0;
       if (m.contains_base()) {
@@ -122,6 +125,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
             assert(false);
         }
       }
+    //   cout << "MBase: " << base_value << endl;
       operand_values[OperandID::MBase] = base_value;
 
       uint64_t index_value = 0;
@@ -144,6 +148,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
             assert(false);
         }
       }
+    //   cout << "MIndex: " << index_value << endl;
       operand_values[OperandID::MIndex] = index_value;
 
     } else if (op.is_gp_register()) {
