@@ -867,6 +867,226 @@ TEST_P(LeakageValidatorTest, LeaConstBaseVarIndexLeaky) {
   EXPECT_LT(0ul, validator->counter_examples_available());
 }
 
+TEST_P(LeakageValidatorTest, AdcZeroCFLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rsi + x64asm::rdi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %ebx" << std::endl;
+  sst << "addl $1, %ebx" << std::endl;
+  sst << "adcl %esi, %edi" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %ebx" << std::endl;
+  ssr << "addl $1, %ebx" << std::endl;
+  ssr << "adcl %esi, %edi" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, AdcZeroCFZeroOpNonLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() +  x64asm::rdi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %ebx" << std::endl;
+  sst << "addl $1, %ebx" << std::endl;
+  sst << "movl $0, %esi" << std::endl;
+  sst << "adcl %esi, %edi" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %ebx" << std::endl;
+  ssr << "addl $1, %ebx" << std::endl;
+  ssr << "movl $0, %esi" << std::endl;
+  ssr << "adcl %esi, %edi" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, AdcVarCFLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi + eflags_cf;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "adcq %rsi, %rdi" << std::endl;
+  sst << "movq %rdi, %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "adcq %rsi, %rdi" << std::endl;
+  ssr << "movq %rdi, %rax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, AdcOneCFNonLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $0xFFFFFFFF, %ebx" << std::endl;
+  sst << "addl $1, %ebx" << std::endl;
+  sst << "adcl %esi, %edi" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $0xFFFFFFFF, %ebx" << std::endl;;
+  ssr << "addl $1, %ebx" << std::endl;
+  ssr << "adcl %esi, %edi" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, SbbZeroCFLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rsi + x64asm::rdi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %ebx" << std::endl;
+  sst << "addl $1, %ebx" << std::endl;
+  sst << "sbbl %esi, %edi" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %ebx" << std::endl;
+  ssr << "addl $1, %ebx" << std::endl;
+  ssr << "sbbl %esi, %edi" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, SbbZeroCFZeroOpNonLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() +  x64asm::rdi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $1, %ebx" << std::endl;
+  sst << "addl $1, %ebx" << std::endl;
+  sst << "movl $0, %esi" << std::endl;
+  sst << "sbbl %esi, %edi" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $1, %ebx" << std::endl;
+  ssr << "addl $1, %ebx" << std::endl;
+  ssr << "movl $0, %esi" << std::endl;
+  ssr << "sbbl %esi, %edi" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, SbbVarCFLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi + x64asm::eflags_cf;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "sbbq %rsi, %rdi" << std::endl;
+  sst << "movq %rdi, %rax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "sbbq %rsi, %rdi" << std::endl;
+  ssr << "movq %rdi, %rax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_FALSE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_LT(0ul, validator->counter_examples_available());
+}
+
+TEST_P(LeakageValidatorTest, SbbOneCFNonLeaky) {
+
+  auto def_ins = x64asm::RegSet::empty() + x64asm::rdi + x64asm::rsi;
+  auto live_outs = x64asm::RegSet::empty() + x64asm::rax;
+
+  std::stringstream sst;
+  sst << ".foo:" << std::endl;
+  sst << "movl $0xFFFFFFFF, %ebx" << std::endl;
+  sst << "addl $1, %ebx" << std::endl;
+  sst << "sbbl %esi, %edi" << std::endl;
+  sst << "movl %edi, %eax" << std::endl;
+  sst << "retq" << std::endl;
+  auto target = make_cfg(sst, def_ins, live_outs);
+
+  std::stringstream ssr;
+  ssr << ".foo:" << std::endl;
+  ssr << "movl $0xFFFFFFFF, %ebx" << std::endl;;
+  ssr << "addl $1, %ebx" << std::endl;
+  ssr << "sbbl %esi, %edi" << std::endl;
+  ssr << "movl %edi, %eax" << std::endl;
+  ssr << "retq" << std::endl;
+  auto rewrite = make_cfg(ssr, def_ins, live_outs);
+
+  EXPECT_TRUE(validator->verify(target, rewrite));
+  EXPECT_FALSE(validator->has_error()) << validator->error();
+  EXPECT_EQ(0ul, validator->counter_examples_available());
+}
+
 INSTANTIATE_TEST_CASE_P(AllSolversAliasing, LeakageValidatorTest,
                         ::testing::Combine(
                           ::testing::Values(ObligationChecker::AliasStrategy::FLAT, ObligationChecker::AliasStrategy::ARM),

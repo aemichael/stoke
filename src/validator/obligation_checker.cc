@@ -16,9 +16,11 @@
 
 #include "src/cfg/cfg.h"
 #include "src/cfg/paths.h"
+#include "src/ext/x64asm/include/x64asm.h"
 #include "src/symstate/memory/arm.h"
 #include "src/symstate/memory/trivial.h"
 #include "src/validator/obligation_checker.h"
+#include "src/validator/handler.h"
 #include "src/validator/invariants/conjunction.h"
 #include "src/validator/invariants/memory_equality.h"
 #include "src/validator/invariants/state_equality.h"
@@ -1415,6 +1417,15 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
 
     // 1a: Collect operand SymBitVector values and widths into a map
     unordered_map<OperandID, pair<SymBitVector, uint16_t>> operands;
+
+    // Record CF if needed
+    const std::string opc = Handler::get_opcode(opcode);
+    if (opc.substr(0, 3) == "adc" || opc.substr(0, 3) == "sbb") {
+        const SymBool cf = state[x64asm::Constants::eflags_cf()];
+        const SymBitVector cfbv = cf.ite(SymBitVector::constant(1, 1), SymBitVector::constant(1, 0));
+        operands[OperandID::CF] = make_pair(cfbv, 1);
+    }
+
     for (size_t i = 0; i < instr.arity(); ++i) {
       OperandID id = get_operand_id(instr, i, false);
       // cout << "Id for operand " << instr.type(i) << " at index " << i << ": " << id << endl;
@@ -1491,7 +1502,7 @@ bool ObligationChecker::check_instr_leakage(const Cfg& cfg, size_t index, JumpTy
     }
   } // if (it != leakage_ranges.end())
   // else {
-  //   cout << "Opcode " << opcode << " not found in leakage table" << endl;
+  // cout << "Opcode " << opcode << " not found in leakage table" << endl;
   // }
 
   // Step 2: Step the state forward once

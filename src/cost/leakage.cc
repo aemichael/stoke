@@ -55,7 +55,7 @@ void LeakageCost::leakage_callback_wrapper(const StateCallbackData& data, void* 
 void LeakageCost::leakage_callback(const StateCallbackData& data) {
   // Track instruction execution for leakage analysis
   const auto& instruction = data.code[data.line];
-  auto opcode = instruction.get_opcode();
+  Opcode opcode = instruction.get_opcode();
 
   // Terminate early if no leakage range data for this opcode
   if (leakage_ranges.find(opcode) == leakage_ranges.end()) {
@@ -66,6 +66,14 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
 
   // Extract mapped operand values from callback state
   std::unordered_map<OperandID, uint64_t> operand_values;
+
+  // Record CF for instructions depending on it
+  if (needs_carry(opcode)) {
+    const size_t cf_idx = x64asm::Constants::eflags_cf().index();
+    const auto& cf_value = data.state.rf.is_set(cf_idx);
+    operand_values[OperandID::CF] = cf_value;
+  }
+
   for (size_t i = 0; i < instruction.arity(); ++i) {
     const auto& op = instruction.get_operand<x64asm::Operand>(i);
     OperandID id = get_operand_id(instruction, i, false);
@@ -88,7 +96,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
       value = data.state.get_addr(m);
 
       // Record displacement, scale, offset, base
-    //   cout << "MDisp: " << (uint64_t)m.get_disp() << endl;
+      // cout << "MDisp: " << (uint64_t)m.get_disp() << endl;
       operand_values[OperandID::MDisp] = (uint64_t)m.get_disp();
       switch (m.get_scale()) {
         case x64asm::Scale::TIMES_1:
@@ -103,7 +111,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
         case x64asm::Scale::TIMES_8:
           operand_values[OperandID::MScale] = 8;
       };
-    //   cout << "MScale: " << operand_values[OperandID::MScale] << endl;
+      // cout << "MScale: " << operand_values[OperandID::MScale] << endl;
 
       uint64_t base_value = 0;
       if (m.contains_base()) {
@@ -125,7 +133,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
             assert(false);
         }
       }
-    //   cout << "MBase: " << base_value << endl;
+      // cout << "MBase: " << base_value << endl;
       operand_values[OperandID::MBase] = base_value;
 
       uint64_t index_value = 0;
@@ -148,7 +156,7 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
             assert(false);
         }
       }
-    //   cout << "MIndex: " << index_value << endl;
+      // cout << "MIndex: " << index_value << endl;
       operand_values[OperandID::MIndex] = index_value;
 
     } else if (op.is_gp_register()) {

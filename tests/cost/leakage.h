@@ -35,16 +35,22 @@ public:
 
 protected:
 
-  void add_testcases_for_zero(int count) {
+  void add_leakage_testcases(int count) {
     for (int i = 0; i < count; ++i) {
       auto state = get_state();
       
-      // The 10th testcase will set all registers to zero to trigger leakage
-      if (i == 9) {
+      // The 9th testcase sets all registers to zero
+      // The 10th sets all registers to their maximum value
+      if (i == 8) {
         for (size_t j = 0; j < state.gp.size(); ++j) {
           state.gp[j].get_fixed_quad(0) = 0;
         }
+      } else if (i == 9) {
+        for (size_t j = 0; j < state.gp.size(); ++j) {
+          state.gp[j].get_fixed_quad(0) = 0xFFFFFFFFFFFFFFFF;
+        }
       }
+        
       
       // std::cout << "Adding testcase " << i << ": " << state << std::endl;
 
@@ -78,7 +84,7 @@ private:
 TEST_F(LeakageCostTest, SingleSubqLeaks) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -107,7 +113,7 @@ TEST_F(LeakageCostTest, SingleSubqLeaks) {
 TEST_F(LeakageCostTest, SublTransformDoesntLeak) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -142,7 +148,7 @@ TEST_F(LeakageCostTest, SublTransformDoesntLeak) {
 TEST_F(LeakageCostTest, SingleSubqNoZeroCaseDoesntLeak) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(9);
+  add_leakage_testcases(5);
 
   // Setup
   std::stringstream ss;
@@ -171,7 +177,7 @@ TEST_F(LeakageCostTest, SingleSubqNoZeroCaseDoesntLeak) {
 TEST_F(LeakageCostTest, AndqZeroSrcLeaks) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -203,7 +209,7 @@ TEST_F(LeakageCostTest, AndqZeroSrcLeaks) {
 TEST_F(LeakageCostTest, AndlLeaks) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -233,7 +239,7 @@ TEST_F(LeakageCostTest, AndlLeaks) {
 TEST_F(LeakageCostTest, AndqPartialTransformLeaks) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -268,7 +274,7 @@ TEST_F(LeakageCostTest, AndqPartialTransformLeaks) {
 TEST_F(LeakageCostTest, SublTransformZeroLeakyInstructions) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -304,7 +310,7 @@ TEST_F(LeakageCostTest, SublTransformZeroLeakyInstructions) {
 TEST_F(LeakageCostTest, SingleSubqOneLeakyInstruction) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -334,7 +340,7 @@ TEST_F(LeakageCostTest, SingleSubqOneLeakyInstruction) {
 TEST_F(LeakageCostTest, SubqAndqTwoLeakyInstructions) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -365,7 +371,7 @@ TEST_F(LeakageCostTest, SubqAndqTwoLeakyInstructions) {
 TEST_F(LeakageCostTest, SublTransformZeroEquivalenceClasses) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -401,7 +407,7 @@ TEST_F(LeakageCostTest, SublTransformZeroEquivalenceClasses) {
 TEST_F(LeakageCostTest, SingleSubqOneEquivalenceClass) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -431,7 +437,7 @@ TEST_F(LeakageCostTest, SingleSubqOneEquivalenceClass) {
 TEST_F(LeakageCostTest, SublTransformZeroValueRanges) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -467,7 +473,7 @@ TEST_F(LeakageCostTest, SublTransformZeroValueRanges) {
 TEST_F(LeakageCostTest, SingleSubqTwoValueRanges) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -497,7 +503,7 @@ TEST_F(LeakageCostTest, SingleSubqTwoValueRanges) {
 TEST_F(LeakageCostTest, SingleAddqThreeValueRanges) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -527,7 +533,7 @@ TEST_F(LeakageCostTest, SingleAddqThreeValueRanges) {
 TEST_F(LeakageCostTest, LeaLeakageDetected) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -556,7 +562,7 @@ TEST_F(LeakageCostTest, LeaLeakageDetected) {
 TEST_F(LeakageCostTest, SafeLeaLeakageNotDetected) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -583,10 +589,10 @@ TEST_F(LeakageCostTest, SafeLeaLeakageNotDetected) {
   EXPECT_EQ(0ul, result.second);  // Cost should be 0 (always adding 0)
 }
 
-TEST_F(LeakageCostTest, SafeLeaLeakageAsFuncOfDispDetected) {
+TEST_F(LeakageCostTest, LeaLeakageAsFuncOfDispDetected) {
 
   // Add testcases with different values to trigger leakage patterns
-  add_testcases_for_zero(10);
+  add_leakage_testcases(10);
 
   // Setup
   std::stringstream ss;
@@ -597,6 +603,252 @@ TEST_F(LeakageCostTest, SafeLeaLeakageAsFuncOfDispDetected) {
   ss << ".foo:" << std::endl;
   ss << "movl $0, %esi" << std::endl;
   ss << "leal -4(%esi, %edi, 1), %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1
+}
+
+TEST_F(LeakageCostTest, AdcLeakageDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "btq $0, %rsi" << std::endl;
+  ss << "adcl %edi, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leaky leaw
+}
+
+TEST_F(LeakageCostTest, AdcZeroCFSummandLeakageNotDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $0, %edi" << std::endl;
+  ss << "addl $0, %edi" << std::endl;
+  ss << "adcl %edi, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 (always adding 0)
+}
+
+TEST_F(LeakageCostTest, AdcZeroCFVarSummandLeakageDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $0, %edi" << std::endl;
+  ss << "addl $0, %edi" << std::endl;
+  ss << "adcl %esi, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1
+}
+
+TEST_F(LeakageCostTest, AdcOneCFVarSummandLeakageNotDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $0xFFFFFFFF, %edi" << std::endl;
+  ss << "addl $1, %edi" << std::endl;
+  ss << "adcl %esi, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 1
+}
+
+TEST_F(LeakageCostTest, AdcVarCFFixedSummandLeakageNotDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $1, %esi" << std::endl;
+  ss << "movl $2, %eax" << std::endl;
+  ss << "adcl %esi, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 (always adding 0)
+}
+
+TEST_F(LeakageCostTest, SbbLeakageDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "btq $0, %rsi" << std::endl;
+  ss << "sbbl %edx, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(1ul, result.second);  // Cost should be 1 for leaky leaw
+}
+
+TEST_F(LeakageCostTest, SbbZeroCFFixedSrcLeakageNotDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $0, %edi" << std::endl;
+  ss << "addl $1, %edi" << std::endl;
+  ss << "sbbl %edi, %eax" << std::endl;
+  ss << "retq" << std::endl;
+  ss >> code;
+
+  auto cfg = make_cfg(code);
+
+  // Run the code to generate execution data for leakage analysis
+  sb_.run(cfg);
+  
+  // Compute leakage cost
+  auto result = fxn_(cfg);
+
+  // Expect the cost to be 1 (indicating leakage was detected)
+  EXPECT_TRUE(result.first);  // Should be successful
+  EXPECT_EQ(0ul, result.second);  // Cost should be 0 (always adding 0)
+}
+
+TEST_F(LeakageCostTest, SbbZeroCFVarSrcLeakageDetected) {
+
+  // Add testcases with different values to trigger leakage patterns
+  add_leakage_testcases(10);
+
+  // Setup
+  std::stringstream ss;
+  x64asm::Code code;
+
+  // Create a program with a single subq instruction
+  ss.clear();
+  ss << ".foo:" << std::endl;
+  ss << "movl $0, %edi" << std::endl;
+  ss << "addl $0, %edi" << std::endl;
+  ss << "sbbl %esi, %eax" << std::endl;
   ss << "retq" << std::endl;
   ss >> code;
 

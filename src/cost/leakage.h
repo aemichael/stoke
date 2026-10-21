@@ -18,12 +18,14 @@
 #include <unordered_map>
 #include <tuple>
 #include <vector>
+#include <string>
 
 #include "src/cost/cost_function.h"
 #include "src/cost/leakage_reduction.h"
 #include "src/sandbox/state_callback.h"
 #include "src/ext/x64asm/include/x64asm.h"
 #include "src/validator/leakage_ranges.h"
+#include "src/validator/handler.h"
 
 namespace stoke {
 
@@ -59,6 +61,11 @@ public:
   LeakageCost& set_reduction(LeakageReduction r) {
     reduction_ = r;
     return *this;
+  }
+
+  static bool needs_carry(const x64asm::Opcode& opcode) {
+    const std::string opc = Handler::get_opcode(opcode);
+    return opc.substr(0, 3) == "adc" || opc.substr(0, 3) == "sbb";
   }
 
 private:
