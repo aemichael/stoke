@@ -58,17 +58,19 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   Opcode opcode = instruction.get_opcode();
 
   // Terminate early if no leakage range data for this opcode
-  if (leakage_ranges.find(opcode) == leakage_ranges.end()) {
+  const auto ranges_it = leakage_ranges.find(opcode);
+  if (ranges_it == leakage_ranges.end()) {
     return;
   }
   // cout << endl << "Calling back on " << opcode << endl;
   num_callbacks++;
 
   // Extract mapped operand values from callback state
-  std::unordered_map<OperandID, uint64_t> operand_values;
+  // (Small inline map: this runs once per instruction per testcase, so avoid heap allocation.)
+  OperandValues operand_values;
 
   // Record CF for instructions depending on it
-  if (needs_carry(opcode)) {
+  if (needs_carry_cached(opcode)) {
     const size_t cf_idx = x64asm::Constants::eflags_cf().index();
     const auto& cf_value = data.state.rf.is_set(cf_idx);
     operand_values[OperandID::CF] = cf_value;
@@ -185,14 +187,10 @@ void LeakageCost::leakage_callback(const StateCallbackData& data) {
   }
 
   // Record equivalence class and corresponding value ranges
-  std::pair<int,uint32_t> eq_class_and_mask = get_equivalence_class_and_partition_mask(operand_values, opcode);
+  std::pair<int,uint32_t> eq_class_and_mask = get_equivalence_class_and_partition_mask(operand_values, ranges_it->second);
   const int eq_class = eq_class_and_mask.first;
   if (eq_class >= 0) {
-    // Initialize leakage_monitor entry if it doesn't exist
-    if (leakage_monitor.find(data.line) == leakage_monitor.end() ||
-        leakage_monitor[data.line].find(eq_class) == leakage_monitor[data.line].end()) {
-      leakage_monitor[data.line][eq_class] = 0;
-    }
+    // operator[] value-initializes missing entries to 0
     leakage_monitor[data.line][eq_class] |= eq_class_and_mask.second;
   }
 }
@@ -235,13 +233,7 @@ int LeakageCost::sum_value_ranges() const {
   return sum;
 }
 
-std::pair<int,uint32_t> LeakageCost::get_equivalence_class_and_partition_mask(const std::unordered_map<OperandID, uint64_t>& values, x64asm::Opcode& opcode) {
-  auto it = leakage_ranges.find(opcode);
-  if (it == leakage_ranges.end()) {
-    return std::make_pair(-1, 0); // No leakage information for this opcode
-  }
-
-  const std::vector<EquivalenceClass>& eq_classes = it->second;
+std::pair<int,uint32_t> LeakageCost::get_equivalence_class_and_partition_mask(const OperandValues& values, const std::vector<EquivalenceClass>& eq_classes) {
   int eq_class = -1;
   uint32_t value_ranges = 100;
 
@@ -258,7 +250,7 @@ std::pair<int,uint32_t> LeakageCost::get_equivalence_class_and_partition_mask(co
   return std::make_pair(eq_class, value_ranges);
 }
 
-uint32_t LeakageCost::get_partition_index_mask(const EquivalenceClass& eq_class, const std::unordered_map<OperandID, uint64_t>& values) {
+uint32_t LeakageCost::get_partition_index_mask(const EquivalenceClass& eq_class, const OperandValues& values) {
   uint32_t mask = 0;
   for (size_t i = 0; i < eq_class.partitions.size(); ++i) {
     const auto& partition_map = eq_class.partitions[i];
@@ -284,13 +276,23 @@ uint32_t LeakageCost::get_partition_index_mask(const EquivalenceClass& eq_class,
   return mask;
 }
 
-uint32_t LeakageCost::popct(uint32_t val) const {
-  uint32_t popct = 0;
-  while (val > 0) {
-    ++popct;
-    val = val >> 1;
+bool LeakageCost::has_leakage_ranges(const x64asm::Instruction& instr) {
+  return leakage_ranges.find(instr.get_opcode()) != leakage_ranges.end();
+}
+
+bool LeakageCost::needs_carry_cached(const x64asm::Opcode& opcode) {
+  // 0 = unknown, 1 = no, 2 = yes
+  static std::vector<uint8_t> cache((size_t)X64ASM_NUM_OPCODES, 0);
+  uint8_t& c = cache[(size_t)opcode];
+  if (c == 0) {
+    c = needs_carry(opcode) ? 2 : 1;
   }
-  return popct;
+  return c == 2;
+}
+
+uint32_t LeakageCost::popct(uint32_t val) const {
+  // Number of set bits, i.e., value ranges hit
+  return __builtin_popcount(val);
 }
 
 } // namespace stoke

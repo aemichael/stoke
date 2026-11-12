@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <tuple>
 #include <vector>
+#include <cassert>
+#include <cstdint>
 #include <string>
 
 #include "src/cost/cost_function.h"
@@ -45,7 +47,8 @@ public:
   virtual CostFunction& setup_test_sandbox(Sandbox* sb) {
     test_sandbox_ = sb;
     // Insert the leakage tracking callback
-    sb->insert_before(leakage_callback_wrapper, this);
+    // Only instrument instructions that have leakage ranges; leakage_callback ignores the rest
+    sb->insert_before(leakage_callback_wrapper, this, has_leakage_ranges);
     return *this;
   }
 
@@ -71,6 +74,34 @@ public:
 private:
   int num_callbacks;
 
+  /** Fixed-capacity map from operand to value; same semantics as unordered_map::operator[] for writes. */
+  class OperandValues {
+  public:
+    typedef std::pair<OperandID, uint64_t> value_type;
+    uint64_t& operator[](OperandID id) {
+      for (size_t i = 0; i < size_; ++i) {
+        if (entries_[i].first == id) {
+          return entries_[i].second;
+        }
+      }
+      assert(size_ < kCapacity);
+      entries_[size_] = value_type(id, 0);
+      return entries_[size_++].second;
+    }
+    const value_type* begin() const { return entries_; }
+    const value_type* end() const { return entries_ + size_; }
+  private:
+    static const size_t kCapacity = (size_t)OperandID::NotSupported + 1;
+    value_type entries_[kCapacity];
+    size_t size_ = 0;
+  };
+
+  /** True iff leakage_ranges has an entry for this instruction's opcode */
+  static bool has_leakage_ranges(const x64asm::Instruction& instr);
+
+  /** needs_carry(), cached per opcode */
+  static bool needs_carry_cached(const x64asm::Opcode& opcode);
+
   /** Instance method to handle leakage tracking */
   void leakage_callback(const StateCallbackData& data);
 
@@ -86,18 +117,18 @@ private:
   /** Count the number of value ranges across all equivalence classes and instructions */
   int sum_value_ranges() const;
 
-  /** 
-   * Determine equivalence class index (first element) and mask representing the value range(s) within that class. 
+  /**
+   * Determine equivalence class index (first element) and mask representing the value range(s) within that class.
    * If there is no value range information for this opcode, returns (-1, 0).
    * If there is value range information but no equivalence class matches, returns (-1, nonzero).
   */
-  std::pair<int,uint32_t> get_equivalence_class_and_partition_mask(const std::unordered_map<OperandID, uint64_t>& values, x64asm::Opcode& opcode);
+  std::pair<int,uint32_t> get_equivalence_class_and_partition_mask(const OperandValues& values, const std::vector<EquivalenceClass>& eq_classes);
 
-  /** 
+  /**
    * Determine which value range(s) the values fall into within the given equivalence class, represented as a
    * one-hot encoding. Returns 0 if no partition map matches the values.
    */
-  uint32_t get_partition_index_mask(const EquivalenceClass& eq_class, const std::unordered_map<OperandID, uint64_t>& values);
+  uint32_t get_partition_index_mask(const EquivalenceClass& eq_class, const OperandValues& values);
 
   /** Utility function */
   uint32_t popct(uint32_t val) const;
