@@ -164,6 +164,9 @@ public:
 
   /** Insert a callback before every line in every function. */
   Sandbox& insert_before(StateCallback cb, void* arg);
+  /** Insert a callback before every line for which filter(instr) is true. Lines for which it is
+      false get no callback code at all (the callback would have been a no-op for them). */
+  Sandbox& insert_before(StateCallback cb, void* arg, bool (*filter)(const x64asm::Instruction&));
   /** Insert a callback before this line */
   Sandbox& insert_before(const x64asm::Label& l, size_t line, StateCallback cb, void* arg);
   /** Insert a callback after every line in every function. */
@@ -260,6 +263,8 @@ private:
 
   /** Global callback to invoke before any line is executed. */
   std::pair<StateCallback, void*> global_before_;
+  /** Optional filter for global_before_; nullptr means every line. */
+  bool (*global_before_filter_)(const x64asm::Instruction&) = nullptr;
   /** Before callbacks on a per-line basis */
   std::unordered_map<x64asm::Label, std::unordered_map<size_t, std::pair<StateCallback, void*>>> before_;
   /** Global callback to invoke after any line is executed. */
@@ -392,7 +397,7 @@ private:
   /** Emit a single callback for this line. */
   void emit_callback(const std::pair<StateCallback, void*>& cb, const x64asm::Label& fxn, size_t line);
   /** Emit all before callbacks */
-  void emit_before(const x64asm::Label& fxn, size_t line);
+  void emit_before(const x64asm::Label& fxn, size_t line, const x64asm::Instruction& instr);
   /** Emit all after callbacks */
   void emit_after(const x64asm::Label& fxn, size_t line);
   /** Emit an instruction (and possibly sandbox memory). */

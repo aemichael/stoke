@@ -190,7 +190,12 @@ Sandbox& Sandbox::clear_functions() {
 }
 
 Sandbox& Sandbox::insert_before(StateCallback cb, void* arg) {
+  return insert_before(cb, arg, nullptr);
+}
+
+Sandbox& Sandbox::insert_before(StateCallback cb, void* arg, bool (*filter)(const Instruction&)) {
   global_before_ = {cb, arg};
+  global_before_filter_ = filter;
   recompile();
   return *this;
 }
@@ -217,6 +222,7 @@ Sandbox& Sandbox::insert_after(const Label& l, size_t line, StateCallback cb, vo
 
 Sandbox& Sandbox::clear_callbacks() {
   global_before_ = {nullptr, nullptr};
+  global_before_filter_ = nullptr;
   before_.clear();
   global_after_ = {nullptr, nullptr};
   after_.clear();
@@ -742,7 +748,7 @@ bool Sandbox::emit_function(const Cfg& cfg, Function* fxn) {
 
       // Emit callbacks and instruction
       if (global_before_.first != nullptr || !before_.empty()) {
-        emit_before(cfg.get_function().get_leading_label(), i);
+        emit_before(cfg.get_function().get_leading_label(), i, instr);
       }
       emit_instruction(instr, label, hex_offset, entry, exit);
       if (global_after_.first != nullptr || !after_.empty()) {
@@ -800,8 +806,9 @@ void Sandbox::emit_callback(const pair<StateCallback, void*>& cb, const Label& f
   emit_load_user_rsp();
 }
 
-void Sandbox::emit_before(const Label& label, size_t line) {
-  if (global_before_.first != nullptr) {
+void Sandbox::emit_before(const Label& label, size_t line, const Instruction& instr) {
+  if (global_before_.first != nullptr &&
+      (global_before_filter_ == nullptr || global_before_filter_(instr))) {
     emit_callback(global_before_, label, line);
   }
   const auto i = before_.find(label);
