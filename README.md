@@ -13,7 +13,7 @@ scripts found in that repo, i.e., `stoke_setup.sh`, `stoke_teardown.sh`, and
 
 If you would like to run STOKE manually, `synth/run_stoke.sh` in this repo can be used
 to do so. Just make sure to set up and SSH into the Docker container first.
-`stoke_dockerkey[.pub]` contains a local SSH keypair to make this easy:
+After creating an SSH keypair at `stoke_dockerkey` and `stoke_dockerkey.pub`:
 
 ```sh
 docker build -t stoke:eval .
