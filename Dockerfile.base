@@ -1,5 +1,4 @@
 FROM ubuntu:14.04
-MAINTAINER Berkeley Churchill (berkeley@cs.stanford.edu)
 
 # SSH setup
 CMD ["/usr/sbin/sshd", "-D"]

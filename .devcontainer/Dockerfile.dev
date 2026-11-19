@@ -1,5 +1,4 @@
 FROM ubuntu:20.04
-LABEL maintainer="Berkeley Churchill (berkeley@cs.stanford.edu)"
 
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive

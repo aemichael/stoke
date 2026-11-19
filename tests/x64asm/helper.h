@@ -69,7 +69,6 @@ values the instruction writes.
 For example, this uncovers errors in the must/maybe read/write/undef sets. */
 
 struct SpreadsheetReadWriteSetFuzzCallbackInfo {
-  // Berkeley deserves eternal punishment for the name of this struct.
   size_t success_count;
 };
 

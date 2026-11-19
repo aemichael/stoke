@@ -955,7 +955,7 @@ void Sandbox::emit_memory_instruction(const Instruction& instr, uint64_t hex_off
   // Load the alignment mask into rsi, and the read/write mask into rdx/rcx
   switch (instr.type(mi)) {
   case Type::M_256:
-    // Berkeley says that 256-bit values DON'T have to be aligned? Is this true?
+    // 256-bit values supposedly DON'T have to be aligned? Is this true?
     assm_.mov(rsi, Imm64(0xffffffffffffffe0));
     assm_.mov(rdx, Imm64(0x00000000ffffffff));
     break;

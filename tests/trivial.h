@@ -14,7 +14,6 @@
 
 
 /*
- * Author: Berkeley Churchill <berkeleychurchill@gmail.com>
  * September 22, 2014
  *
  * This is to illustrate the basic way to test stuff

@@ -16,7 +16,6 @@
 /*
  * STOKE Test Suite
  * Initial Version: September 22nd, 2014
- * Author: Berkeley Churchill <berkeleychurchill@gmail.com>
  *
  * Google test comes with macros to register tests.  Whenever
  * you create a new test, all you need is to use the TEST macro,

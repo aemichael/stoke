@@ -1326,7 +1326,7 @@ void unpcklpdHandler(v_data d, unsigned int bitWidth, bool three_args, Expr E_de
 
 
   if (three_args || bitWidth != 128) {
-    VALIDATOR_ERROR("Berkeley only knows how to handle unpcklpd with two arguments and bit width 128.");
+    VALIDATOR_ERROR("The validator only knows how to handle unpcklpd with two arguments and bit width 128.");
   }
 
   /* Force bits 0..63 of destination to match bits 0..63 of source1. */
