@@ -16,6 +16,7 @@
 #ifndef _STOKE_SRC_SYMSTATE_SYM_ARRAY_H
 #define _STOKE_SRC_SYMSTATE_SYM_ARRAY_H
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 
@@ -160,8 +161,9 @@ public:
 };
 
 
-} //namespace stoke
+/** Declared in namespace stoke so argument-dependent lookup finds it. */
+std::ostream& operator<< (std::ostream& out, const SymArray& bv);
 
-std::ostream& operator<< (std::ostream& out, const stoke::SymArray& bv);
+} //namespace stoke
 
 #endif

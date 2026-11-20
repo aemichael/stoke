@@ -442,6 +442,10 @@ SymBitVector SymState::get_addr(M<T> memory) const {
   return address;
 }
 
+// Explicitly instantiate: callers in other translation units (handlers, tools)
+// link against this, and modern GCC does not emit it implicitly.
+template SymBitVector SymState::get_addr<M8>(M<M8> memory) const;
+
 /** Get address corresponding to a memory reference */
 SymBitVector SymState::get_addr(const Instruction& instr) const {
 

@@ -15,6 +15,7 @@
 #ifndef STOKE_SRC_EXPR_EXPR_H
 #define STOKE_SRC_EXPR_EXPR_H
 
+#include <cmath>
 #include <functional>
 
 

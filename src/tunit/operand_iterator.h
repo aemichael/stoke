@@ -16,6 +16,8 @@
 #define STOKE_SRC_TUNIT_OPERAND_ITERATOR_H
 
 #include <cassert>
+#include <cstddef>
+#include <iterator>
 
 #include "src/ext/x64asm/include/x64asm.h"
 
@@ -26,6 +28,12 @@ class operand_iterator {
   friend class TUnit;
 
 public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = T;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const T*;
+  using reference = const T&;
+
   const T& operator*() const {
     return code_->at(instr_).get_operand<T>(operand_);
   }

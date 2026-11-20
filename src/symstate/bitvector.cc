@@ -242,7 +242,7 @@ bool SymBitVectorArrayLookup::equals(const SymBitVectorAbstract * other) const {
 
 
 /* Output overload */
-std::ostream& operator<< (std::ostream& out, const stoke::SymBitVector& bv) {
+std::ostream& stoke::operator<< (std::ostream& out, const stoke::SymBitVector& bv) {
   SymPrettyVisitor spv(out);
   spv(bv);
   return out;

@@ -582,7 +582,7 @@ SupportReason StrataHandler::support_reason(const x64asm::Opcode& opcode) {
     if (is_supported(alt)) return reason;
   } else {
     // we have a learned circuit
-    if (filesystem::exists(candidate_file)) {
+    if (boost::filesystem::exists(candidate_file)) {
       return SupportReason::LEARNED;
     }
   }
@@ -644,7 +644,7 @@ Handler::SupportLevel StrataHandler::get_support(const x64asm::Instruction& inst
     ss << opcode << "_" << strata_get_imm8(instr);
     auto candidate_file = strata_path_ + "/" + ss.str() + ".s";
     // we have a learned circuit
-    if (filesystem::exists(candidate_file)) {
+    if (boost::filesystem::exists(candidate_file)) {
       return yes;
     }
   }

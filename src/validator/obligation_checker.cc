@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <chrono>
+#include <numeric>
 
 #include "src/cfg/cfg.h"
 #include "src/cfg/paths.h"

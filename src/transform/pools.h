@@ -15,6 +15,8 @@
 #ifndef STOKE_SRC_TRANSFORM_POOLS_H
 #define STOKE_SRC_TRANSFORM_POOLS_H
 
+#include <random>
+
 #include "src/cfg/cfg.h"
 #include "src/ext/x64asm/include/x64asm.h"
 #include "src/validator/validator.h"

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstdint>
 #include <string>
 
 #ifndef _STOKE_SRC_SYMSTATE_BOOL_H
@@ -445,9 +446,10 @@ public:
 
 
 
-} //namespace stoke
+/** Declared in namespace stoke so argument-dependent lookup finds it. */
+std::ostream& operator<< (std::ostream& out, const SymBool& bv);
 
-std::ostream& operator<< (std::ostream& out, const stoke::SymBool& bv);
+} //namespace stoke
 
 
 #endif

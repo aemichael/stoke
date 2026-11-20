@@ -805,9 +805,10 @@ public:
 
 
 
-} //namespace stoke
+/** Declared in namespace stoke so argument-dependent lookup finds it. */
+std::ostream& operator<< (std::ostream& out, const SymBitVector& bv);
 
-std::ostream& operator<< (std::ostream& out, const stoke::SymBitVector& bv);
+} //namespace stoke
 
 /* We need to include these to make sure templates instantiate, but not
    before SymBitVector is declared! */

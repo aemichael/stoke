@@ -16,6 +16,7 @@
 #ifndef STOKE_SRC_VALIDATOR_HANDLER_PACKED_HANDLER_H
 #define STOKE_SRC_VALIDATOR_HANDLER_PACKED_HANDLER_H
 
+#include <cmath>
 #include <map>
 #include <functional>
 
