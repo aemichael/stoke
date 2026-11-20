@@ -1,0 +1,18 @@
+# Host build outputs; the image rebuilds these with its own toolchain.
+# Only build products are excluded -- tracked files under these dirs are
+# re-included (bin/stoke wrapper, strata programs, x64asm's lib/ and bin/ dirs).
+**/*.o
+.depend
+.stoke_config
+bin/*
+!bin/stoke
+!bin/eval_success
+!bin/strata-programs
+src/ext/z3/build
+src/ext/cvc5/build
+src/ext/cvc5/install
+src/ext/googletest/build
+src/ext/x64asm/lib/*
+!src/ext/x64asm/lib/.gitignore
+src/ext/x64asm/bin/*
+!src/ext/x64asm/bin/.gitignore

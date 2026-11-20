@@ -101,26 +101,31 @@ in the stanfordpl/stoke-test repository.  These should be available for recent
 branches and pull requests, for example.
 
 You can build your own docker images by running `docker build .` in
-the top level of this repository.  These are built upon the
-`stanfordpl/stoke-base:latest` image, which contains compiled versions of Z3
-and CVC4.  If you want to upgrade Z3 or CVC4, it will require rebuilding these
-imsages.  The `Dockerfile.base` dockerfile may be used for this purpose (but
-it's not part of continuous integration, so it may require some manual work to
-get it to happen).
+the top level of this repository (after `git submodule update --init`). The
+image is based on Ubuntu 26.04 and builds Z3, cvc5 and googletest from the
+submodules under `src/ext` as part of the image build.
 
 Downloading and Building STOKE
 =====
 
-STOKE should work on Ubuntu 14.04 and Ubuntu 16.04.  Regardless of
-distribution, the key to making stoke right is using gcc version 4.9.  Below
-that, the compiler doesn't support enough features to build our code.  Above
-that, there are some issues with an ABI change in gcc-5.
+STOKE builds with a modern toolchain (tested with GCC 15 on Ubuntu 26.04) in
+C++17 mode. Pinned dependency versions:
 
-    $ sudo apt-get install bison ccache cmake doxygen exuberant-ctags flex g++-4.9 g++-multilib gcc-4.9 ghc git libantlr3c-dev libboost-dev libboost-filesystem-dev libboost-thread-dev libcln-dev libghc-regex-compat-dev libghc-regex-tdfa-dev libghc-split-dev libjsoncpp-dev python subversion libiml-dev libgmp-dev libboost-regex-dev autoconf libtool antlr pccts pkg-config
+| Dependency  | Version | Source                                   |
+|-------------|---------|------------------------------------------|
+| Z3          | 5.4.1   | `src/ext/z3` submodule (CMake)           |
+| cvc5        | 1.4.2   | `src/ext/cvc5` submodule (`--no-cvc5` to skip) |
+| googletest  | 1.18.0  | `src/ext/googletest` submodule           |
+| x64asm      | upstream + `src/ext/patches/x64asm-modern-toolchain.patch` | submodule |
+| Boost, jsoncpp, GMP, CLN, IML | distribution packages | apt |
 
-Note that your distribution might not have g++-4.9 by default.  You may
-consider installing a PPA as described here:
-https://askubuntu.com/questions/466651/how-do-i-use-the-latest-gcc-4-9-on-ubuntu-14-04
+    $ sudo apt-get install autoconf bison build-essential ccache cmake flex g++ g++-multilib ghc git libboost-all-dev libcln-dev libghc-regex-compat-dev libghc-regex-tdfa-dev libghc-split-dev libgmp-dev libiml-dev libjsoncpp-dev libtool m4 ninja-build pkg-config python3 python3-tomli python3-venv
+
+The SMT backend is chosen at runtime with `--solver z3` (default) or
+`--solver cvc5` (`cvc4` is accepted as an alias for older config files).
+
+The Pin 2.13 kit used by `stoke_testcase` predates modern compilers and
+kernels; it is no longer built by default (`make WITH_PIN=1` to try anyway).
 
 The rest of the dependencies will be fetched automatically as part of the build
 process.
