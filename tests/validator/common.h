@@ -689,8 +689,8 @@ private:
   /* The validator we're using */
   BoundedValidator v_;
   /* The solver we're using */
-#ifndef NOCVC4
-  Cvc4Solver s_;
+#ifndef NOCVC5
+  Cvc5Solver s_;
 #else
   Z3Solver s_;
 #endif

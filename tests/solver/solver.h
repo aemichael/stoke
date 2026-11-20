@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NOCVC4
-#include "cvc4solver.h"
+#ifndef NOCVC5
+#include "cvc5solver.h"
 #endif
 #include "z3solver.h"

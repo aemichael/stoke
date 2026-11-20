@@ -24,8 +24,9 @@ using namespace stoke;
 
 namespace {
 
-array<pair<string, Solver>, 2> pts {{
-    {"cvc4", Solver::CVC4},
+array<pair<string, Solver>, 3> pts {{
+    {"cvc5", Solver::CVC5},
+    {"cvc4", Solver::CVC5}, // legacy alias; CVC4 was replaced by cvc5
     {"z3",   Solver::Z3 }
   }
 };

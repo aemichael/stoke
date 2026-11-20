@@ -7,3 +7,9 @@
 [submodule "src/ext/z3"]
 	path = src/ext/z3
 	url = https://github.com/Z3Prover/z3.git
+[submodule "src/ext/cvc5"]
+	path = src/ext/cvc5
+	url = https://github.com/cvc5/cvc5.git
+[submodule "src/ext/googletest"]
+	path = src/ext/googletest
+	url = https://github.com/google/googletest.git

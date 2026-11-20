@@ -15,9 +15,12 @@
 #ifndef STOKE_TOOLS_GADGETS_SOLVER_H
 #define STOKE_TOOLS_GADGETS_SOLVER_H
 
+#include <cstdlib>
+#include <iostream>
+
 #include "src/solver/smtsolver.h"
-#ifndef NOCVC4
-#include "src/solver/cvc4solver.h"
+#ifndef NOCVC5
+#include "src/solver/cvc5solver.h"
 #endif
 #include "src/solver/z3solver.h"
 #include "tools/args/solver.inc"
@@ -32,13 +35,18 @@ public:
     case Solver::Z3:
       solver_ = new Z3Solver();
       break;
-#ifndef NOCVC4
-    case Solver::CVC4:
-      solver_ = new Cvc4Solver();
+#ifndef NOCVC5
+    case Solver::CVC5:
+      solver_ = new Cvc5Solver();
       break;
 #endif
     default:
-      assert(false);
+      std::cerr << "Requested SMT solver is not available in this build";
+#ifdef NOCVC5
+      std::cerr << " (STOKE was configured with --no-cvc5)";
+#endif
+      std::cerr << std::endl;
+      exit(1);
     }
 
     set_timeout(timeout_arg);

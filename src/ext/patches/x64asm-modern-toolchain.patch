@@ -1,0 +1,149 @@
+diff --git a/Makefile b/Makefile
+index f2ab83d..4164f62 100644
+--- a/Makefile
++++ b/Makefile
+@@ -17,7 +17,7 @@
+ ifndef CXX
+ 	CXX=g++
+ endif
+-GCC=ccache ${CXX} -Werror -Wextra -Wall -Wfatal-errors -pedantic -Wno-unused-parameter -Wno-reorder -std=c++11 -fPIC
++GCC=ccache ${CXX} -Werror -Wextra -Wall -Wfatal-errors -pedantic -Wno-unused-parameter -Wno-reorder -std=c++17 -fPIC
+ 
+ INC=-I./
+ 		
+diff --git a/src/assembler.h b/src/assembler.h
+index 3e805c9..1f7ee7f 100644
+--- a/src/assembler.h
++++ b/src/assembler.h
+@@ -157,32 +157,32 @@ private:
+   Function* fxn_;
+ 
+   /** REX prefix constant */
+-  constexpr uint8_t rex() {
++  constexpr uint8_t rex() const {
+     return 0x40;
+   }
+   /** REX.W prefix constant */
+-  constexpr uint8_t rex_w() {
++  constexpr uint8_t rex_w() const {
+     return 0x48;
+   }
+   /** REX.R prefix constant */
+-  constexpr uint8_t rex_r() {
++  constexpr uint8_t rex_r() const {
+     return 0x44;
+   }
+   /** REX.X prefix constant */
+-  constexpr uint8_t rex_x() {
++  constexpr uint8_t rex_x() const {
+     return 0x42;
+   }
+   /** REX.B prefix constant */
+-  constexpr uint8_t rex_b() {
++  constexpr uint8_t rex_b() const {
+     return 0x41;
+   }
+ 
+   /** Does this operand require a REX prefix? */
+-  constexpr bool requires_rex_byte(const Operand& o) {
++  constexpr bool requires_rex_byte(const Operand& o) const {
+     return o.type() == Type::R_8 && o.val_ > 3;
+   }
+   /** Does this operand require a REX.[R,X,B] prefix? */
+-  constexpr bool requires_rex_bit(const Operand& o) {
++  constexpr bool requires_rex_bit(const Operand& o) const {
+     return o.val_ > 7;
+   }
+ 
+diff --git a/src/hint.h b/src/hint.h
+index 83231a4..3192cb9 100644
+--- a/src/hint.h
++++ b/src/hint.h
+@@ -32,7 +32,7 @@ class Hint : public Operand {
+ 
+ public:
+   /** Checks that this hint is well-formed. */
+-  constexpr bool check() {
++  constexpr bool check() const {
+     return val_ < 2;
+   }
+ 
+diff --git a/src/modifier.h b/src/modifier.h
+index bd34859..0b3eea1 100644
+--- a/src/modifier.h
++++ b/src/modifier.h
+@@ -30,7 +30,7 @@ namespace x64asm {
+ class Modifier : public Operand {
+ public:
+   /** Returns true if this modifier is well-formed. */
+-  constexpr bool check() {
++  constexpr bool check() const {
+     return val_ == 0;
+   }
+ 
+@@ -48,7 +48,7 @@ public:
+   }
+ 
+   /** Conversion based on val_. */
+-  constexpr operator uint64_t() {
++  constexpr operator uint64_t() const {
+     return val_;
+   }
+ 
+diff --git a/src/r.cc b/src/r.cc
+index 889af33..160ca82 100644
+--- a/src/r.cc
++++ b/src/r.cc
+@@ -218,29 +218,29 @@ istream& R::read_att(istream& is) {
+ ostream& R::write_att(ostream& os) const {
+   switch(type()) {
+   case Type::RH:
+-    return static_cast<const Rh* const>(this)->write_att(os);
++    return static_cast<const Rh*>(this)->write_att(os);
+     break;
+ 
+   case Type::R_8:
+   case Type::AL:
+   case Type::CL:
+-    return static_cast<const R8* const>(this)->write_att(os);
++    return static_cast<const R8*>(this)->write_att(os);
+     break;
+ 
+   case Type::R_16:
+   case Type::AX:
+   case Type::DX:
+-    return static_cast<const R16 * const>(this)->write_att(os);
++    return static_cast<const R16*>(this)->write_att(os);
+     break;
+ 
+   case Type::R_32:
+   case Type::EAX:
+-    return static_cast<const R32 * const>(this)->write_att(os);
++    return static_cast<const R32*>(this)->write_att(os);
+     break;
+ 
+   case Type::R_64:
+   case Type::RAX:
+-    return static_cast<const R64 * const>(this)->write_att(os);
++    return static_cast<const R64*>(this)->write_att(os);
+     break;
+ 
+   default:
+diff --git a/src/sse.cc b/src/sse.cc
+index 2fa27b7..13c70be 100644
+--- a/src/sse.cc
++++ b/src/sse.cc
+@@ -30,11 +30,11 @@ ostream& Sse::write_att(ostream& os) const {
+   switch(type()) {
+   case Type::XMM_0:
+   case Type::XMM:
+-    return static_cast<const Xmm * const>(this)->write_att(os);
++    return static_cast<const Xmm*>(this)->write_att(os);
+     break;
+ 
+   case Type::YMM:
+-    return static_cast<const Ymm * const>(this)->write_att(os);
++    return static_cast<const Ymm*>(this)->write_att(os);
+     break;
+ 
+   default:

@@ -27,23 +27,23 @@
 
 namespace stoke {
 
-class BoundedValidatorBaseTest : public ::testing::TestWithParam<std::tr1::tuple<ObligationChecker::AliasStrategy, Solver>> {
+class BoundedValidatorBaseTest : public ::testing::TestWithParam<std::tuple<ObligationChecker::AliasStrategy, Solver>> {
 
 public:
 
   BoundedValidatorBaseTest() {
-    auto param = ::testing::TestWithParam<std::tr1::tuple<ObligationChecker::AliasStrategy, Solver>>::GetParam();
-    auto solver_type = std::tr1::get<1>(GetParam());
+    auto param = ::testing::TestWithParam<std::tuple<ObligationChecker::AliasStrategy, Solver>>::GetParam();
+    auto solver_type = std::get<1>(GetParam());
     // if (solver_type == Solver::Z3) {
       std::cout << "Using Z3" << std::endl;
       solver = new Z3Solver();
     // }
-    // else if (solver_type == Solver::CVC4) {
+    // else if (solver_type == Solver::CVC5) {
     //   std::cout << "Using CVC4" << std::endl;
-    //   solver = new Cvc4Solver();
+    //   solver = new Cvc5Solver();
     // }
 
-    std::cout << "Alias Strategy " << std::tr1::get<0>(param) << std::endl;
+    std::cout << "Alias Strategy " << std::get<0>(param) << std::endl;
 
     sandbox = new Sandbox();
     sandbox->set_max_jumps(4096);
@@ -61,7 +61,7 @@ public:
     validator->set_bound(2);
     validator->set_filter(filter);
     validator->set_sandbox(sandbox);
-    validator->set_alias_strategy(std::tr1::get<0>(param));
+    validator->set_alias_strategy(std::get<0>(param));
     validator->set_heap_out(true);
     validator->set_stack_out(true);
   }
@@ -714,7 +714,7 @@ TEST_P(BoundedValidatorBaseTest, LoopMemoryEquiv) {
   ssr << "retq" << std::endl;
   auto rewrite = make_cfg(ssr, def_ins, live_outs);
 
-  if (std::tr1::get<0>(GetParam()) == ObligationChecker::AliasStrategy::FLAT) {
+  if (std::get<0>(GetParam()) == ObligationChecker::AliasStrategy::FLAT) {
     cout << "Skipping this test! Too slow!" << endl;
     return;
   }

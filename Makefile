@@ -17,11 +17,13 @@
 ## Include any variables set by the user
 -include .stoke_config
 
-NOCVC4=1
-
-## Choose the compiler to use
-CXX=g++-4.9
-CC=gcc-4.9
+## Choose the compiler to use (override with e.g. `make CXX=clang++ CC=clang`)
+ifeq ($(origin CXX),default)
+	CXX=g++
+endif
+ifeq ($(origin CC),default)
+	CC=gcc
+endif
 
 
 ifndef STOKE_PLATFORM
@@ -73,27 +75,30 @@ ifndef EXT_TARGET
 endif
 
 #CXX_FLAGS are any extra flags the user might want to pass to the compiler
-ifdef NOCVC4
-CXX_FLAGS += -DNOCVC4=1
+ifdef NOCVC5
+CXX_FLAGS += -DNOCVC5=1
 endif
 
-WARNING_FLAGS=-Wall -Werror=switch -Wextra -Wfatal-errors -Wno-deprecated -Wno-unused-parameter -Wno-unused-variable -Wvla -fdiagnostics-color=always -Wno-ignored-qualifiers
-# Use the old ABI to match GCC 4.9 default and avoid JSON linking issues
-# This ensures compatibility between STOKE code and all dependencies (x64asm, jsoncpp)
-ABI_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0
-STOKE_CXX=ccache $(CXX) $(CXX_FLAGS) -std=c++14 $(ABI_FLAGS) $(WARNING_FLAGS)
-CVC4_SRCDIR=src/ext/cvc4-1.5
-CVC4_OUTDIR=$(CVC4_SRCDIR)-build
-CVC4_OUTDIR_ABS=$(shell pwd)/$(CVC4_OUTDIR)
+WARNING_FLAGS=-Wall -Werror=switch -Wextra -Wfatal-errors -Wno-deprecated -Wno-unused-parameter -Wno-unused-variable -Wvla -fdiagnostics-color=always -Wno-ignored-qualifiers -Wno-overloaded-virtual
+STOKE_CXX=ccache $(CXX) $(CXX_FLAGS) -std=c++17 $(WARNING_FLAGS)
+
+Z3_DIR=src/ext/z3
+Z3_BUILD=$(Z3_DIR)/build
+CVC5_DIR=src/ext/cvc5
+CVC5_BUILD=$(CVC5_DIR)/build
+CVC5_INSTALL=$(CVC5_DIR)/install
+CVC5_INSTALL_ABS=$(shell pwd)/$(CVC5_INSTALL)
+GTEST_DIR=src/ext/googletest
+GTEST_BUILD=$(GTEST_DIR)/build
 
 INC_FOLDERS=\
 						./ \
 						src/ext/cpputil/ \
 						src/ext/x64asm \
-						src/ext/gtest-1.7.0/include \
-						src/ext/z3/src/api
-ifndef NOCVC4
-INC_FOLDERS += $(CVC4_OUTDIR)/include
+						$(GTEST_DIR)/googletest/include \
+						$(Z3_DIR)/src/api
+ifndef NOCVC5
+INC_FOLDERS += $(CVC5_INSTALL)/include
 endif
 
 INC=$(addprefix -I./, $(INC_FOLDERS))
@@ -104,18 +109,18 @@ DEPS=\
 LIB=\
 	src/ext/x64asm/lib/libx64asm.a \
 	-pthread \
-	 -lboost_filesystem -lboost_system -lboost_regex  -lboost_thread \
+	 -lboost_filesystem -lboost_regex  -lboost_thread \
 	-lcln \
 	-liml -lgmp \
-	-L src/ext/z3/build -lz3
-ifndef NOCVC4
-LIB += -L $(CVC4_OUTDIR)/lib -lcvc4
+	-L $(Z3_BUILD) -lz3
+ifndef NOCVC5
+LIB += -L $(CVC5_INSTALL)/lib -lcvc5
 endif
 
-ifndef NOCVC4
-LDFLAGS=-Wl,-rpath=\$$ORIGIN/../src/ext/z3/build:\$$ORIGIN/../$(CVC4_OUTDIR)/lib,--enable-new-dtags
+ifndef NOCVC5
+LDFLAGS=-Wl,-rpath=\$$ORIGIN/../$(Z3_BUILD):\$$ORIGIN/../$(CVC5_INSTALL)/lib,--enable-new-dtags
 else
-LDFLAGS=-Wl,-rpath=\$$ORIGIN/../src/ext/z3/build,--enable-new-dtags
+LDFLAGS=-Wl,-rpath=\$$ORIGIN/../$(Z3_BUILD),--enable-new-dtags
 endif
 
 SRC_OBJ=\
@@ -207,12 +212,9 @@ SRC_OBJ=\
 	\
 	src/verifier/hold_out.o
 
-ifndef NOCVC4
-SRC_OBJ += 	src/solver/cvc4solver.o
+ifndef NOCVC5
+SRC_OBJ += 	src/solver/cvc5solver.o
 endif
-#ifdef NOCVC4
-#$(error NOCVC4 define)
-#endif
 TOOL_ARGS_OBJ=\
 	tools/args/benchmark.o \
 	tools/args/cost.o \
@@ -336,7 +338,13 @@ depend:
 
 ##### EXTERNAL TARGETS
 
-external: cpputil x64asm z3 cvc4 pintool src/ext/gtest-1.7.0/libgtest.a
+# The Pin 2.13 kit used by stoke_testcase cannot be built with modern compilers
+# or run on modern kernels, so it is opt-in: `make WITH_PIN=1 ...`.
+ifdef WITH_PIN
+PIN_EXTERNAL=pintool
+endif
+
+external: cpputil x64asm z3 cvc5 gtest $(PIN_EXTERNAL)
 	if [ ! -f .depend ]; then \
 		$(MAKE) -C . depend; \
 	fi
@@ -355,6 +363,7 @@ x64asm: src/ext/x64asm/lib/libx64asm.a
 
 src/ext/x64asm/lib/libx64asm.a:
 	./scripts/make/submodule-init.sh src/ext/x64asm
+	./scripts/make/apply-patch.sh src/ext/x64asm src/ext/patches/x64asm-modern-toolchain.patch
 	$(MAKE) -j$(NTHREADS) -C src/ext/x64asm EXT_OPT="$(EXT_OPT)" CXX="${CXX}" CC="${CC}"
 
 .PHONY: pintool
@@ -362,35 +371,40 @@ pintool:
 	$(MAKE) -j$(NTHREADS) -C src/ext/pin-2.13-62732-gcc.4.4.7-linux/source/tools/stoke TARGET="$(EXT_TARGET)" \
 					CXX="${CXX}" CC="${CC}"
 
-src/ext/gtest-1.7.0/libgtest.a:
-	rm -f src/ext/gtest-1.7.0/CMakeCache.txt
-	CXX="${CXX}" CC="${CC}" cmake src/ext/gtest-1.7.0/CMakeLists.txt
-	VERBOSE="1" $(MAKE) -C src/ext/gtest-1.7.0 -j$(NTHREADS)
+## googletest
+.PHONY: gtest
+gtest: $(GTEST_BUILD)/lib/libgtest.a
 
-# cvc4: $(CVC4_OUTDIR)/lib/libcvc4.so
-.PHONY: cvc4
+$(GTEST_BUILD)/lib/libgtest.a:
+	./scripts/make/submodule-init.sh $(GTEST_DIR)
+	CXX="${CXX}" CC="${CC}" cmake -S $(GTEST_DIR) -B $(GTEST_BUILD) \
+		-DCMAKE_BUILD_TYPE=Release -DBUILD_GMOCK=OFF -DINSTALL_GTEST=OFF
+	cmake --build $(GTEST_BUILD) -j$(NTHREADS)
 
-$(CVC4_OUTDIR)/lib/libcvc4.so: $(CVC4_SRCDIR)/configure
-	cd $(CVC4_SRCDIR) && ./configure --prefix=$(CVC4_OUTDIR_ABS) CVC4_BSD_LICENSED_CODE_ONLY=0 --with-cln
-	cd $(CVC4_SRCDIR) && CC="${CC}" CXX="${CXX}" make -j$(NTHREADS)
-	cd $(CVC4_SRCDIR) && CC="${CC}" CXX="${CXX}" make install
+## cvc5 (built from the submodule; GMP/CaDiCaL/SymFPU/libpoly fetched if missing)
+.PHONY: cvc5
+ifndef NOCVC5
+cvc5: $(CVC5_INSTALL)/lib/libcvc5.so
+else
+cvc5:
+endif
 
-$(CVC4_SRCDIR)/configure:
-	# unpacking via tar to avoid problems with autoconf timestamps
-	cd src/ext && tar -xf cvc4-1.5.tar.gz  
-	cd src/ext && patch -p0 < cvc4.patch
+$(CVC5_INSTALL)/lib/libcvc5.so:
+	./scripts/make/submodule-init.sh $(CVC5_DIR)
+	cd $(CVC5_DIR) && CC="${CC}" CXX="${CXX}" ./configure.sh unrestricted --auto-download \
+		--prefix=$(CVC5_INSTALL_ABS) --name=build
+	$(MAKE) -C $(CVC5_BUILD) -j$(NTHREADS)
+	$(MAKE) -C $(CVC5_BUILD) install
 
+## z3
 .PHONY: z3
-z3: src/ext/z3/build/libz3.so
+z3: $(Z3_BUILD)/libz3.so
 
-src/ext/z3/build/libz3.so: z3init src/ext/z3/build/Makefile
-	cd src/ext/z3/build && CC="${CC}" CXX="${CXX}" make -j$(NTHREADS)
-
-z3init:
-	./scripts/make/submodule-init.sh src/ext/z3
-
-src/ext/z3/build/Makefile:
-	cd src/ext/z3 && CC="${CC}" CXX="${CXX}" python scripts/mk_make.py
+$(Z3_BUILD)/libz3.so:
+	./scripts/make/submodule-init.sh $(Z3_DIR)
+	CC="${CC}" CXX="${CXX}" cmake -S $(Z3_DIR) -B $(Z3_BUILD) -DCMAKE_BUILD_TYPE=Release \
+		-DZ3_BUILD_LIBZ3_SHARED=ON -DZ3_BUILD_TEST_EXECUTABLES=OFF -DZ3_BUILD_PYTHON_BINDINGS=OFF
+	cmake --build $(Z3_BUILD) -j$(NTHREADS)
 
 ##### VALIDATOR AUTOGEN
 
@@ -412,8 +426,6 @@ src/sandbox/%.o: src/sandbox/%.cc $(DEPS)
 src/search/%.o: src/search/%.cc $(DEPS)
 	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) -c $< -o $@
 src/solver/%.o: src/solver/%.cc $(DEPS)
-	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) -c $< -o $@
-src/solver/cvc4solver.o: src/solver/cvc4solver.cc $(DEPS)
 	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) -c $< -o $@
 src/state/%.o: src/state/%.cc $(DEPS)
 	$(STOKE_CXX) $(TARGET) $(OPT) $(ARCH_OPT) $(INC) -c $< -o $@
@@ -447,12 +459,10 @@ bin/%: tools/apps/%.cc $(DEPS) $(SRC_OBJ) $(TOOL_NON_ARG_OBJ) tools/gadgets/*.h
 TEST_OBJ=\
          tests/fixture.o \
          \
-         src/ext/gtest-1.7.0/libgtest.a \
-         src/ext/gtest-1.7.0/libgtest_main.a
+         $(GTEST_BUILD)/lib/libgtest.a \
+         $(GTEST_BUILD)/lib/libgtest_main.a
 
-# Use custom jsoncpp compiled with old ABI if available, fallback to system
-# Priority: 1) containerized lib, 2) local custom lib, 3) system lib
-TEST_LIBS=$(shell if [ -f /usr/local/stoke/lib/libjsoncpp.a ]; then echo /usr/local/stoke/lib/libjsoncpp.a; elif [ -f src/ext/libjsoncpp.a ]; then echo src/ext/libjsoncpp.a; else echo -ljsoncpp; fi)
+TEST_LIBS=-ljsoncpp
 
 TEST_BIN=bin/stoke_test
 
@@ -509,10 +519,9 @@ clean: stoke_clean
 	rm -rf .depend
 
 dist_clean: clean
-	rm -f src/ext/gtest-1.7.0/CMakeCache.txt
 	./scripts/make/submodule-reset.sh src/ext/cpputil
 	./scripts/make/submodule-reset.sh src/ext/x64asm
 	./scripts/make/submodule-reset.sh src/ext/z3
-	- $(MAKE) -C src/ext/gtest-1.7.0 clean
-	rm -rf src/ext/z3/build
-	rm -rf $(CVC4_OUTDIR) $(CVC4_SRCDIR)
+	./scripts/make/submodule-reset.sh $(CVC5_DIR)
+	./scripts/make/submodule-reset.sh $(GTEST_DIR)
+	rm -rf $(Z3_BUILD) $(CVC5_BUILD) $(CVC5_INSTALL) $(GTEST_BUILD)

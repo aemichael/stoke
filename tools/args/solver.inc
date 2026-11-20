@@ -27,7 +27,7 @@ cpputil::Heading& smt_heading =
 
 cpputil::ValueArg<Solver, SolverReader, SolverWriter>& solver_arg =
   cpputil::ValueArg<Solver, SolverReader, SolverWriter>::create("solver")
-  .usage("(cvc4|z3)")
+  .usage("(cvc5|z3)")
   .description("SMT Solver backend")
   .default_val(Solver::Z3);
 

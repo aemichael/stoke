@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function show_help {
-  echo "$0 [--debug-default-target] [--debug-ddec] [--debug-ceg] [--no-cvc4]"
+  echo "$0 [--debug-default-target] [--debug-ddec] [--debug-ceg] [--no-cvc5]"
   echo ""
 }
 
@@ -59,8 +59,8 @@ while :; do
       BUILD_TYPE="debug"
       shift
       ;;
-    --no-cvc4)
-      NOCVC4=1
+    --no-cvc5|--no-cvc4)
+      NOCVC5=1
       shift
       ;;
     -?*)
@@ -84,8 +84,8 @@ echo "STOKE_PLATFORM=\"$PLATFORM\"" >> .stoke_config
 echo "BUILD_TYPE=$BUILD_TYPE" >> .stoke_config
 echo "MISC_OPTIONS=$MISC_OPTIONS" >> .stoke_config
 
-if [ ! -z $NOCVC4 ]; then
-echo "NOCVC4=$NOCVC4" >> .stoke_config
+if [ ! -z $NOCVC5 ]; then
+echo "NOCVC5=$NOCVC5" >> .stoke_config
 fi
 
 
