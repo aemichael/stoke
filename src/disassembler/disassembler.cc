@@ -208,6 +208,21 @@ string Disassembler::fix_instruction(const string& line) {
     return line.substr(0, comma);
   }
 
+  // Newer toolchains: GCC emits CET `endbr64`/`endbr32` landing pads (nops
+  // unless CET is enforced) and `notrack` on indirect jumps, and binutils
+  // >= 2.38 prints segment-prefixed padding as e.g. `cs nopw 0x0(...)`.
+  if (is_prefix(line, "endbr")) {
+    return "nop";
+  }
+  if (is_prefix(line, "notrack ")) {
+    return fix_instruction(line.substr(8));
+  }
+  if (line.length() > 3 && line[2] == ' ' && is_prefix(line.substr(3), "nop") &&
+      (is_prefix(line, "cs") || is_prefix(line, "ds") || is_prefix(line, "es") ||
+       is_prefix(line, "ss") || is_prefix(line, "fs") || is_prefix(line, "gs"))) {
+    return "nop";
+  }
+
   // Synonyms
   if (is_prefix(line, "hlt")) {
     return "retq";

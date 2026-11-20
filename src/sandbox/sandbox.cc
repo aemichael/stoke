@@ -795,7 +795,13 @@ void Sandbox::emit_callback(const pair<StateCallback, void*>& cb, const Label& f
   assm_.mov(r8, Imm64(cb.second));
   // rax = callback wrapper call
   assm_.mov((R64)rax, Imm64(&callback_wrapper));
+  // The SysV ABI requires a 16-byte aligned %rsp at the call; modern compilers
+  // emit aligned SSE spills that fault otherwise. %rbx is callee-saved, and
+  // the user's %rbx was already saved above and is restored by out2cpu_.
+  assm_.mov(rbx, rsp);
+  assm_.and_(rsp, Imm8(0xf0));
   assm_.call(rax);
+  assm_.mov(rsp, rbx);
 
   // Restore the user's state
   // This leaves STOKE's %rsp in place, but that's what we want

@@ -2,7 +2,7 @@
 all: check
 
 orig: test.c
-	gcc -g -std=c99 -O1 test.c -o orig
+	gcc -g -std=c99 -O1 -fcf-protection=none test.c -o orig
 
 extract: orig
 	stoke extract -i orig -o extract

@@ -293,7 +293,11 @@ pair<map<uint64_t, cpputil::BitVector>, uint8_t> Z3Solver::get_model_array(
       DEBUG_Z3(cout << hex << "adding " << addr << "->" << value << endl;)
     }
 
-    z3::expr default_value = fun_interp.else_value();
+    z3::expr default_expr = fun_interp.else_value();
+    uint64_t default_value = 0;
+    if (default_expr.is_numeral())
+      Z3_get_numeral_uint64(context_, default_expr, (long long unsigned int*)&default_value);
+    assert(default_value <= 0xff);
     pair<map<uint64_t, cpputil::BitVector>, uint8_t> result;
     result.first = addr_val_map;
     result.second = default_value;
